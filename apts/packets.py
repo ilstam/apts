@@ -15,28 +15,78 @@
 
 
 class TftpPacket:
-    pass
+    """
+    Represents a TFTP packet.
+    All TFTP packets should inherit from this class and it may not be
+    instantiated directly.
+    """
+    opcode = None
+
+    @classmethod
+    def from_wire(cls, payload):
+        """
+        Creates a TftpPacket object by parsing the payload.
+
+        Keyword arguments:
+        payload -- a packet that comes directly from the wire,
+                   without its first 2 bytes which are the opcode
+        """
+        raise NotImplementedError("Abstract method")
+
+    def send(self, session):
+        """
+        Sends a TftpPacket to the wire, through the socket defined in the
+        session.
+
+        Keyword arguments:
+        session -- an object holding the state of the current connection
+        """
+        raise NotImplementedError("Abstract method")
+
+    def respond_to(self, session):
+        """
+        Handles a received TftpPacket.
+
+        Keyword arguments:
+        session -- an object holding the state of the current connection
+
+        Returns a new TftpPacket as a response to the received one.
+        """
+        raise NotImplementedError("Abstract method")
 
 
 class RQPacket(TftpPacket):
-    pass
+    def __init__(self, filename, mode):
+        self.filename = filename
+        self.mode = mode
 
 
 class RRQPacket(RQPacket):
-    pass
+    opcode = 1
 
 
 class WRQPacket(RQPacket):
-    pass
-
-
-class ACKPacket(TftpPacket):
-    pass
+    opcode = 2
 
 
 class DATAPacket(TftpPacket):
-    pass
+    opcode = 3
+
+    def __init__(self, block, data):
+        self.block = block
+        self.data = data
+
+
+class ACKPacket(TftpPacket):
+    opcode = 4
+
+    def __init__(self, block):
+        self.block = block
 
 
 class ErrorPacket(TftpPacket):
-    pass
+    opcode = 5
+
+    def __init__(self, block, error_msg):
+        self.block = block
+        self.error_msg = error_msg
