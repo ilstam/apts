@@ -21,9 +21,11 @@ class TftpPacket:
     Represents a TFTP packet.
     All TFTP packets should inherit from this class and it may not be
     instantiated directly.
+
+    Instance variables of the derived objects should contain raw bytes.
     """
-    opcode = None
-    seperator = '\x00'
+    opcode = -1
+    seperator = b'\x00'
 
     @classmethod
     def from_wire(cls, payload):
@@ -74,7 +76,7 @@ class RQPacket(TftpPacket):
     def __init__(self, filename, mode):
         self.filename = filename
         self.mode = mode.lower()
-        assert self.mode in ('netascii', 'octet'), "Unsupported mode"
+        assert self.mode in (b'netascii', b'octet'), "Unsupported mode"
 
     @classmethod
     def from_wire(cls, payload):
