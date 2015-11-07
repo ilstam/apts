@@ -121,15 +121,55 @@ class DATAPacket(TftpPacket):
 
 
 class ACKPacket(TftpPacket):
+    """
+    ACKPacket representation:
+
+     2 bytes    2 bytes
+     -------------------
+    |  04   |   Block #  |
+     --------------------
+    """
     opcode = 4
 
     def __init__(self, block):
         self.block = block
 
+    @classmethod
+    def from_wire(cls, payload):
+        try:
+            block = struct.unpack('!H', payload)[0]
+        except struct.error:
+            # handle this error
+            return
+
+        return cls(block)
+
 
 class ErrorPacket(TftpPacket):
+    """
+    ErrorPacket representation:
+
+     2 bytes  2 bytes        string    1 byte
+     ----------------------------------------
+    |  05   |  ErrorCode |   ErrMsg   |   0  |
+     ----------------------------------------
+    """
     opcode = 5
 
-    def __init__(self, block, error_msg):
-        self.block = block
+    def __init__(self, error_code, error_msg):
+        self.error_code = error_code
         self.error_msg = error_msg
+
+    @classmethod
+    def from_wire(cls, payload):
+        try:
+            error_code = struct.unpack('!H', payload[:2])[0]
+        except struct.error:
+            # handle this error
+            return
+
+        error_msg = payload[2:].split(TftpPacket.seperator)[0]
+        # if not error_code in error_codes:
+            # pass # handle this error
+
+        return cls(error_code, error_msg)
