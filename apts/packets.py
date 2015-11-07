@@ -97,9 +97,9 @@ class WRQPacket(RQPacket):
     opcode = 2
 
 
-class DATAPacket(TftpPacket):
+class DataPacket(TftpPacket):
     """
-    DATAPacket representation:
+    DataPacket representation:
 
      2 bytes    2 bytes       n bytes
      ---------------------------------
