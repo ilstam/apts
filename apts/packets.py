@@ -109,8 +109,6 @@ class DATAPacket(TftpPacket):
     @classmethod
     def from_wire(cls, payload):
         try:
-            # '!' stands for network byte order (big-endian)
-            # 'H' stands for unsigned short
             block = struct.unpack('!H', payload[:2])
             data = payload[2:]
         except struct.error:
@@ -156,9 +154,20 @@ class ErrorPacket(TftpPacket):
     """
     opcode = 5
 
-    def __init__(self, error_code, error_msg):
+    errors = {
+        0 : "Not defined, see error message (if any)",
+        1 : "File not found",
+        2 : "Access violation",
+        3 : "Disk full or allocation exceeded",
+        4 : "Illegal TFTP operation",
+        5 : "Unknown transfer ID",
+        6 : "File already exists",
+        7 : "No such user",
+    }
+
+    def __init__(self, error_code, error_msg=None):
         self.error_code = error_code
-        self.error_msg = error_msg
+        self.error_msg = self.errors[error_code] if error_msg is None else error_msg
 
     @classmethod
     def from_wire(cls, payload):
@@ -169,7 +178,9 @@ class ErrorPacket(TftpPacket):
             return
 
         error_msg = payload[2:].split(TftpPacket.seperator)[0]
-        # if not error_code in error_codes:
-            # pass # handle this error
+
+        if not error_code in ErrorPacket.errors.keys():
+            # handle this error
+            return
 
         return cls(error_code, error_msg)
