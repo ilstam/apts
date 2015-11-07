@@ -33,14 +33,13 @@ class TftpPacket:
         Creates a TftpPacket object by parsing the payload.
 
         Keyword arguments:
-        payload -- a packet that comes directly from the wire,
-                   without its first 2 bytes which are the opcode
+        payload -- a packet in raw bytes, without its first 2 bytes (opcode)
         """
         raise NotImplementedError("Abstract method")
 
     def to_wire(self):
         """
-        Returns the wire representation of the packet (in bytes).
+        Returns the bytes representation of the packet.
         """
         raise NotImplementedError("Abstract method")
 
@@ -55,12 +54,11 @@ class TftpPacket:
         """
         raise NotImplementedError("Abstract method")
 
-    def prepend_opcode(to_wire_func):
-        def wrapper(self):
-            opcode = struct.pack("!H", self.opcode)
-            return b''.join(opcode, to_wire_func())
-
-        return wrapper
+    def binary_opcode(self):
+        """
+        Returns the bytes representation of packet opcode.
+        """
+        return struct.pack("!H", self.opcode)
 
 
 class RQPacket(TftpPacket):
