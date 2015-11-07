@@ -67,7 +67,7 @@ class RQPacket(TftpPacket):
     def __init__(self, filename, mode):
         self.filename = filename
         self.mode = mode.lower()
-        assert mode in ('netascii', 'octet'), "Unsupported mode"
+        assert self.mode in ('netascii', 'octet'), "Unsupported mode"
 
     @classmethod
     def from_wire(cls, payload):
