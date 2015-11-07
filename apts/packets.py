@@ -21,6 +21,7 @@ class TftpPacket:
     instantiated directly.
     """
     opcode = None
+    seperator = '\x00'
 
     @classmethod
     def from_wire(cls, payload):
@@ -56,9 +57,28 @@ class TftpPacket:
 
 
 class RQPacket(TftpPacket):
+    """
+    RQPacket representation:
+
+     2 bytes     string    1 byte     string   1 byte
+     ------------------------------------------------
+    | 01/02  |  Filename  |   0  |    Mode    |   0  |
+     ------------------------------------------------
+    """
+
     def __init__(self, filename, mode):
         self.filename = filename
-        self.mode = mode
+        self.mode = mode.lower()
+        assert mode in ('netascii', 'octet'), "Unsupported mode"
+
+    @classmethod
+    def from_wire(cls, payload):
+        tokens = payload.split(TftpPacket.seperator)
+        if len(tokens) < 2:
+            # handle this error
+            raise Exception
+
+        return cls(filename=tokens[0], mode=tokens[1])
 
 
 class RRQPacket(RQPacket):
