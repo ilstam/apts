@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import struct
+
 
 class TftpPacket:
     """
@@ -90,11 +92,32 @@ class WRQPacket(RQPacket):
 
 
 class DATAPacket(TftpPacket):
+    """
+    DATAPacket representation:
+
+     2 bytes    2 bytes       n bytes
+     ---------------------------------
+    |  03   |   Block #  |    Data    |
+     ---------------------------------
+    """
     opcode = 3
 
     def __init__(self, block, data):
         self.block = block
         self.data = data
+
+    @classmethod
+    def from_wire(cls, payload):
+        try:
+            # '!' stands for network byte order (big-endian)
+            # 'H' stands for unsigned short
+            block = struct.unpack('!H', payload[:2])
+            data = payload[2:]
+        except struct.error:
+            # handle this error
+            return
+
+        return cls(block, data)
 
 
 class ACKPacket(TftpPacket):
