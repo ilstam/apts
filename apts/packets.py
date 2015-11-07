@@ -84,6 +84,10 @@ class RQPacket(TftpPacket):
 
         return cls(filename=tokens[0], mode=tokens[1])
 
+    def to_wire(self):
+        return b''.join((struct.pack("!H", self.opcode), self.filename,
+                         self.seperator, self.mode, self.seperator))
+
 
 class RRQPacket(RQPacket):
     opcode = 1
@@ -130,6 +134,9 @@ class DATAPacket(TftpPacket):
 
         return cls(blockn, data)
 
+    def to_wire(self):
+        return b''.join((struct.pack('!HH', self.opcode, self.blockn), self.data))
+
 
 class ACKPacket(TftpPacket):
     """
@@ -158,6 +165,9 @@ class ACKPacket(TftpPacket):
             return
 
         return cls(blockn)
+
+    def to_wire(self):
+        return struct.pack('!HH', self.opcode, self.blockn)
 
 
 class ErrorPacket(TftpPacket):
@@ -210,3 +220,7 @@ class ErrorPacket(TftpPacket):
             return
 
         return cls(error_code, error_msg)
+
+    def to_wire(self):
+        return b''.join((struct.pack('!HH', self.opcode, self.error_code),
+                         self.error_msg, self.seperator))
