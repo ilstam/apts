@@ -36,13 +36,9 @@ class TftpPacket:
         """
         raise NotImplementedError("Abstract method")
 
-    def send(self, session):
+    def to_wire(self):
         """
-        Sends a TftpPacket to the wire, through the socket defined in the
-        session.
-
-        Keyword arguments:
-        session -- an object holding the state of the current connection
+        Returns the wire representation of the packet (in bytes).
         """
         raise NotImplementedError("Abstract method")
 
