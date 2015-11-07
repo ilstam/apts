@@ -12,8 +12,8 @@ class TestRRQPacket(unittest.TestCase):
         """
         RRQ packets opcode must be 1.
         """
-        packet = packets.RQPacket(b'filename', b'octet')
-        self.assertEqual(packet.opcode, -1)
+        packet = packets.RRQPacket(b'filename', b'octet')
+        self.assertEqual(packet.opcode, 1)
 
 
 class TestWRQPacket(unittest.TestCase):
@@ -21,8 +21,8 @@ class TestWRQPacket(unittest.TestCase):
         """
         WRQ packets opcode must be 2.
         """
-        packet = packets.RQPacket(b'filename', b'octet')
-        self.assertEqual(packet.opcode, -1)
+        packet = packets.WRQPacket(b'filename', b'octet')
+        self.assertEqual(packet.opcode, 2)
 
 
 class TestDataPacket(unittest.TestCase):
