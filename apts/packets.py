@@ -53,6 +53,13 @@ class TftpPacket:
         """
         raise NotImplementedError("Abstract method")
 
+    def prepend_opcode(to_wire_func):
+        def wrapper(self):
+            opcode = struct.pack("!H", self.opcode)
+            return b''.join(opcode, to_wire_func())
+
+        return wrapper
+
 
 class RQPacket(TftpPacket):
     """
