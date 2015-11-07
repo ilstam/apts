@@ -21,8 +21,6 @@ class TftpPacket:
     Represents a TFTP packet.
     All TFTP packets should inherit from this class and it may not be
     instantiated directly.
-
-    Instance variables of the derived objects should contain raw bytes.
     """
     opcode = -1
     seperator = b'\x00'
@@ -54,12 +52,6 @@ class TftpPacket:
         """
         raise NotImplementedError("Abstract method")
 
-    def binary_opcode(self):
-        """
-        Returns the bytes representation of packet opcode.
-        """
-        return struct.pack("!H", self.opcode)
-
 
 class RQPacket(TftpPacket):
     """
@@ -72,6 +64,13 @@ class RQPacket(TftpPacket):
     """
 
     def __init__(self, filename, mode):
+        """
+        Keyword arguments:
+        filename -- raw bytes, represents the requested file name
+        mode     -- raw bytes, transfer mode, can be b'netascii' or b'octet'
+        """
+        assert isinstance(filename, bytes), "Filename must be in bytes"
+        assert isinstance(mode, bytes), "Mode must be in bytes"
         self.filename = filename
         self.mode = mode.lower()
         assert self.mode in (b'netascii', b'octet'), "Unsupported mode"
@@ -106,6 +105,13 @@ class DATAPacket(TftpPacket):
     opcode = 3
 
     def __init__(self, blockn, data):
+        """
+        Keyword arguments:
+        blockn -- integer, sequence number
+        data   -- raw bytes, file data, 512 bytes or less
+        """
+        assert isinstance(data, bytes), "Data must be in bytes"
+        assert len(data) <= 512, "512 bytes of data is the max for a packet"
         self.blockn = blockn
         self.data = data
 
@@ -113,8 +119,12 @@ class DATAPacket(TftpPacket):
     def from_wire(cls, payload):
         try:
             blockn = struct.unpack('!H', payload[:2])
-            data = payload[2:]
         except struct.error:
+            # handle this error
+            return
+
+        data = payload[2:]
+        if len(data) > 512:
             # handle this error
             return
 
@@ -133,6 +143,10 @@ class ACKPacket(TftpPacket):
     opcode = 4
 
     def __init__(self, blockn):
+        """
+        Keyword arguments:
+        blockn -- integer, sequence number
+        """
         self.blockn = blockn
 
     @classmethod
@@ -169,8 +183,17 @@ class ErrorPacket(TftpPacket):
     }
 
     def __init__(self, error_code, error_msg=None):
+        """
+        Keyword arguments:
+        error_code -- integer, TFTP error code
+        error_msg  -- raw bytes, error message
+        """
         self.error_code = error_code
-        self.error_msg = self.errors[error_code] if error_msg is None else error_msg
+        if error_msg is None:
+            self.error_msg = self.errors[error_code]
+        else:
+            assert isinstance(error_msg, bytes), "Error message must be in bytes"
+            self.error_msg = error_msg
 
     @classmethod
     def from_wire(cls, payload):
