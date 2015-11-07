@@ -107,20 +107,20 @@ class DATAPacket(TftpPacket):
     """
     opcode = 3
 
-    def __init__(self, block, data):
-        self.block = block
+    def __init__(self, blockn, data):
+        self.blockn = blockn
         self.data = data
 
     @classmethod
     def from_wire(cls, payload):
         try:
-            block = struct.unpack('!H', payload[:2])
+            blockn = struct.unpack('!H', payload[:2])
             data = payload[2:]
         except struct.error:
             # handle this error
             return
 
-        return cls(block, data)
+        return cls(blockn, data)
 
 
 class ACKPacket(TftpPacket):
@@ -134,18 +134,18 @@ class ACKPacket(TftpPacket):
     """
     opcode = 4
 
-    def __init__(self, block):
-        self.block = block
+    def __init__(self, blockn):
+        self.blockn = blockn
 
     @classmethod
     def from_wire(cls, payload):
         try:
-            block = struct.unpack('!H', payload)[0]
+            blockn = struct.unpack('!H', payload)[0]
         except struct.error:
             # handle this error
             return
 
-        return cls(block)
+        return cls(blockn)
 
 
 class ErrorPacket(TftpPacket):
