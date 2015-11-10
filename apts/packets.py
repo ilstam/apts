@@ -113,11 +113,15 @@ class DataPacket(TftpPacket):
         Keyword arguments:
         blockn -- integer, sequence number
         data   -- raw bytes, file data, 512 bytes or less
+
+        The is_last instance variable indicates whether the packet is the last
+        in the sequence of all the sent or received packets.
         """
         assert isinstance(data, bytes), "Data must be in bytes"
         assert len(data) <= 512, "512 bytes of data is the max for a packet"
         self.blockn = blockn
         self.data = data
+        self.is_last = len(data) < 512
 
     @classmethod
     def from_wire(cls, payload):
