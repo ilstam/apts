@@ -12,8 +12,8 @@ class TestNetascii(unittest.TestCase):
         self.assertEqual(netascii.LF, b'\x0d\x0a')
         self.assertEqual(netascii.CR, b'\x0d\x00')
 
-    def test_from_netascii(self):
+    def test_encode(self):
         pass
 
-    def test_to_netascii(self):
+    def test_decode(self):
         pass
