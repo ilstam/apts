@@ -15,7 +15,7 @@
 
 import socket
 
-import config
+from . import config
 
 
 class TftpServer:
