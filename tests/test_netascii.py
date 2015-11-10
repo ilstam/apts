@@ -1,11 +1,11 @@
 import os
 import unittest
 
-from apts import netascii
+from apts.netascii import LF, CR, encode as net_enc, decode as net_dec
 
-LF = netascii.LF
-CR = netascii.CR
-OSLF = os.linesep # os-specific newline
+COS_LF  = os.linesep # line seperator of the current OS
+WIN_LF  = '\r\n'     # line seperator of MS Windows
+UNIX_LF = '\n'       # line seperator of Unix-like systems (Linux, *BSD, OS X)
 
 
 class TestNetascii(unittest.TestCase):
@@ -17,22 +17,38 @@ class TestNetascii(unittest.TestCase):
         self.assertEqual(LF, b'\x0d\x0a')
         self.assertEqual(CR, b'\x0d\x00')
 
-    def test_encode(self):
-        self.assertEqual(netascii.encode('data'.encode()), 'data'.encode())
-        self.assertEqual(netascii.encode('da\rta'.encode()), b'da' + CR + b'ta')
-        self.assertEqual(netascii.encode('da{0}ta'.format(OSLF).encode()),
+    def test_encode_on_different_OSes(self):
+        """
+        Test the netascii encode function with line seperators of different OSes.
+        """
+        self._test_encode(COS_LF)
+        self._test_encode(UNIX_LF)
+        self._test_encode(WIN_LF)
+
+    def test_decode_on_different_OSes(self):
+        """
+        Test the netascii decode function with line seperators of different OSes.
+        """
+        self._test_decode(COS_LF)
+        self._test_decode(UNIX_LF)
+        self._test_decode(WIN_LF)
+
+    def _test_encode(self, linesep):
+        self.assertEqual(net_enc('data'.encode(), linesep), 'data'.encode())
+        self.assertEqual(net_enc('da\rta'.encode(), linesep), b'da' + CR + b'ta')
+        self.assertEqual(net_enc('da{0}ta'.format(linesep).encode(), linesep),
                                         b'da' + LF + b'ta')
-        self.assertEqual(netascii.encode('da\r{0}ta'.format(OSLF).encode()),
+        self.assertEqual(net_enc('da\r{0}ta'.format(linesep).encode(), linesep),
                                         b'da' + CR + LF + b'ta')
-        self.assertEqual(netascii.encode('da{0}\rta'.format(OSLF).encode()),
+        self.assertEqual(net_enc('da{0}\rta'.format(linesep).encode(), linesep),
                                         b'da' + LF + CR + b'ta')
 
-    def test_decode(self):
-        self.assertEqual(netascii.decode('data'.encode()), 'data'.encode())
-        self.assertEqual(netascii.decode(b'da' + CR + b'ta'), 'da\rta'.encode())
-        self.assertEqual(netascii.decode(b'da' + LF + b'ta'),
-                                        'da{0}ta'.format(OSLF).encode())
-        self.assertEqual(netascii.decode(b'da' + CR + LF + b'ta'),
-                                         'da\r{0}ta'.format(OSLF).encode())
-        self.assertEqual(netascii.decode(b'da' + LF + CR + b'ta'),
-                                         'da{0}\rta'.format(OSLF).encode())
+    def _test_decode(self, linesep):
+        self.assertEqual(net_dec('data'.encode(), linesep), 'data'.encode())
+        self.assertEqual(net_dec(b'da' + CR + b'ta', linesep), 'da\rta'.encode())
+        self.assertEqual(net_dec(b'da' + LF + b'ta', linesep),
+                                        'da{0}ta'.format(linesep).encode())
+        self.assertEqual(net_dec(b'da' + CR + LF + b'ta', linesep),
+                                         'da\r{0}ta'.format(linesep).encode())
+        self.assertEqual(net_dec(b'da' + LF + CR + b'ta', linesep),
+                                         'da{0}\rta'.format(linesep).encode())
