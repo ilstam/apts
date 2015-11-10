@@ -3,8 +3,11 @@
 # netascii a newline is represented by CR+LF, and a single CR is represented
 # by CR+NULL.
 
-LF = b'\x0d\x0a' # ASCII CR + ASCII LF
-CR = b'\x0d\x00' # ASCII CR + ASCII NUL
+import os
+import re
+
+LF = b'\x0d\x0a' # ASCII CR + LF
+CR = b'\x0d\x00' # ASCII CR + NUL
 
 
 def encode(bdata):
@@ -15,7 +18,11 @@ def encode(bdata):
     Keyword arguments:
     bdata -- the byte sequence of a python string
     """
-    pass
+    def f(matched):
+        return CR if matched.group(0) == b'\r' else LF
+
+    regex = '({0}|\r)'.format(os.linesep).encode()
+    return re.sub(regex, f, bdata)
 
 def decode(bdata):
     """
@@ -25,4 +32,8 @@ def decode(bdata):
     Keyword arguments:
     bdata -- the byte sequence of a netascii-encoded string
     """
-    pass
+    def f(matched):
+        return b'\r' if matched.group(0) == CR else os.linesep.encode()
+
+    regex = b'(%s|%s)' % (LF, CR)
+    return re.sub(regex, f, bdata)
