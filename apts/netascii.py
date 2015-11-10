@@ -10,30 +10,34 @@ LF = b'\x0d\x0a' # ASCII CR + LF
 CR = b'\x0d\x00' # ASCII CR + NUL
 
 
-def encode(bdata):
+def encode(bdata, line_seperator=os.linesep):
     """
-    Converts a python string, with platfrom-specific newlines, into a
+    Converts a python string, with platform-specific newlines, into a
     netascii string. Returns a sequence of bytes.
 
     Keyword arguments:
-    bdata -- the byte sequence of a python string
+    bdata          -- the byte sequence of a python string
+    line_seperator -- string, line seperator used in the input data
+                      the default is the line seperator of the current OS
     """
     def f(matched):
         return CR if matched.group(0) == b'\r' else LF
 
-    regex = '({0}|\r)'.format(os.linesep).encode()
+    regex = '({0}|\r)'.format(line_seperator).encode()
     return re.sub(regex, f, bdata)
 
-def decode(bdata):
+def decode(bdata, line_seperator=os.linesep):
     """
     Converts a netascii-encoded string to a python string with
     platform-specific newlines. Returns a sequence of bytes.
 
     Keyword arguments:
-    bdata -- the byte sequence of a netascii-encoded string
+    bdata          -- the byte sequence of a netascii-encoded string
+    line_seperator -- string, line seperator to use for the output data
+                      the default is the line seperator of the current OS
     """
     def f(matched):
-        return b'\r' if matched.group(0) == CR else os.linesep.encode()
+        return b'\r' if matched.group(0) == CR else line_seperator.encode()
 
     regex = b'(%s|%s)' % (LF, CR)
     return re.sub(regex, f, bdata)
