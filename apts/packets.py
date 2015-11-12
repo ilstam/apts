@@ -174,15 +174,24 @@ class ErrorPacket(TftpPacket):
     """
     opcode = 5
 
+    ERR_NOT_DEFINED = 0
+    ERR_FILE_NOT_FOUND = 1
+    ERR_ACCESS_VIOLATION = 2
+    ERR_DISK_FULL = 3
+    ERR_ILLEGAL_OPERATION = 4
+    ERR_UNKNOWN_TID = 5
+    ERR_FILE_EXISTS = 6
+    ERR_NO_SUCH_USER = 7
+
     errors = {
-        0 : "Not defined, see error message (if any)",
-        1 : "File not found",
-        2 : "Access violation",
-        3 : "Disk full or allocation exceeded",
-        4 : "Illegal TFTP operation",
-        5 : "Unknown transfer ID",
-        6 : "File already exists",
-        7 : "No such user",
+        ERR_NOT_DEFINED: "Not defined, see error message (if any)",
+        ERR_FILE_NOT_FOUND: "File not found",
+        ERR_ACCESS_VIOLATION: "Access violation",
+        ERR_DISK_FULL: "Disk full or allocation exceeded",
+        ERR_ILLEGAL_OPERATION: "Illegal TFTP operation",
+        ERR_UNKNOWN_TID: "Unknown transfer ID",
+        ERR_FILE_EXISTS: "File already exists",
+        ERR_NO_SUCH_USER: "No such user",
     }
 
     def __init__(self, error_code, error_msg=None):
