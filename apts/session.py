@@ -44,6 +44,11 @@ class TftpSession:
         self.transfer_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.transfer_socket.bind((local_ip, 0))
 
+        # When we receive data, blockn indicates the block number of the next
+        # DataPacket that we expect to acknowledge. When we send data, blockn
+        # indicates the block number of the last sent DataPacket.
+        self.blockn = 0
+
         # Save the last packet we sent, to make retransmission easy.
         self.last_sent = None
 
