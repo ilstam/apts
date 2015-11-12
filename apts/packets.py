@@ -41,17 +41,6 @@ class TftpPacket:
         """
         raise NotImplementedError("Abstract method")
 
-    def respond_to(self, session):
-        """
-        Handles a received TftpPacket.
-
-        Keyword arguments:
-        session -- an object holding the state of the current connection
-
-        Returns a new TftpPacket as a response to the received one.
-        """
-        raise NotImplementedError("Abstract method")
-
 
 class RQPacket(TftpPacket):
     """
