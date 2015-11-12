@@ -30,7 +30,7 @@ class TftpServer:
 
         # The session dictionary holds all running transfer sessions.
         # We create a new session (with a new socket etc.) for each transfer.
-        # Example: {('ip', 'port'): session_ob1, ('ip2', 'port'): session_ob2}
+        # Example: {('ip', port): session_ob1, ('ip2', port): session_ob2}
         sessions = {}
 
         while True:
@@ -39,7 +39,7 @@ class TftpServer:
             if client_address in sessions:
                 session = sessions[client_address]
             else:
-                session = TftpSession()
+                session = TftpSession(ip, client_address)
                 sessions[client_address] = session
 
 
