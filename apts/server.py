@@ -28,19 +28,10 @@ class TftpServer:
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         server_socket.bind((ip, port))
 
-        # The session dictionary holds all running transfer sessions.
-        # We create a new session (with a new socket etc.) for each transfer.
-        # Example: {('ip', port): session_ob1, ('ip2', port): session_ob2}
-        sessions = {}
-
         while True:
             data, client_address = server_socket.recvfrom(config.bufsize)
 
-            if client_address in sessions:
-                session = sessions[client_address]
-            else:
-                session = TftpSession(ip, client_address)
-                sessions[client_address] = session
+            session = TftpSession(ip, client_address)
 
 
 def main():
