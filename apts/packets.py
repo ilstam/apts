@@ -15,6 +15,9 @@
 
 import struct
 
+from .errors import (DataSizeError, InvalidErrorcodeError, PayloadParseError,
+                     UnsupportedModeError)
+
 
 class TftpPacket:
     """
@@ -58,18 +61,17 @@ class RQPacket(TftpPacket):
         filename -- raw bytes, represents the requested file name
         mode     -- raw bytes, transfer mode, can be b'netascii' or b'octet'
         """
-        assert isinstance(filename, bytes), "Filename must be in bytes"
-        assert isinstance(mode, bytes), "Mode must be in bytes"
         self.filename = filename
         self.mode = mode.lower()
-        assert self.mode in (b'netascii', b'octet'), "Unsupported mode"
+
+        if self.mode not in (b'netascii', b'octet'):
+            raise UnsupportedModeError(self.mode.decode())
 
     @classmethod
     def from_wire(cls, payload):
         tokens = payload.split(TftpPacket.seperator)
         if len(tokens) < 2:
-            # handle this error
-            raise Exception
+            raise PayloadParseError("not enough fields in the payload")
 
         return cls(filename=tokens[0], mode=tokens[1])
 
@@ -106,8 +108,9 @@ class DataPacket(TftpPacket):
         The is_last instance variable indicates whether the packet is the last
         in the sequence of all the sent or received packets.
         """
-        assert isinstance(data, bytes), "Data must be in bytes"
-        assert len(data) <= 512, "512 bytes of data is the max for a packet"
+        if len(data) > 512:
+            raise DataSizeError()
+
         self.blockn = blockn
         self.data = data
         self.is_last = len(data) < 512
@@ -117,13 +120,11 @@ class DataPacket(TftpPacket):
         try:
             blockn = struct.unpack('!H', payload[:2])
         except struct.error:
-            # handle this error
-            return
+            raise PayloadParseError("couldn't extract block number")
 
         data = payload[2:]
         if len(data) > 512:
-            # handle this error
-            return
+            raise DataSizeError()
 
         return cls(blockn, data)
 
@@ -154,8 +155,7 @@ class ACKPacket(TftpPacket):
         try:
             blockn = struct.unpack('!H', payload)[0]
         except struct.error:
-            # handle this error
-            return
+            raise PayloadParseError("couldn't extract block number")
 
         return cls(blockn)
 
@@ -204,7 +204,6 @@ class ErrorPacket(TftpPacket):
         if error_msg is None:
             self.error_msg = self.errors[error_code]
         else:
-            assert isinstance(error_msg, bytes), "Error message must be in bytes"
             self.error_msg = error_msg
 
     @classmethod
@@ -212,14 +211,12 @@ class ErrorPacket(TftpPacket):
         try:
             error_code = struct.unpack('!H', payload[:2])[0]
         except struct.error:
-            # handle this error
-            return
+            raise PayloadParseError("couldn't extract error code")
 
         error_msg = payload[2:].split(TftpPacket.seperator)[0]
 
         if not error_code in ErrorPacket.errors.keys():
-            # handle this error
-            return
+            raise InvalidErrorcodeError(error_code)
 
         return cls(error_code, error_msg)
 
