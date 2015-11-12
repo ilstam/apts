@@ -19,9 +19,8 @@ import socket
 class TftpSession:
     """
     A new session must be created in the beggining of the communication
-    with a new, previously unknown address. Then, it should take care of all
-    the incoming traffick from that specific address, starting with the first
-    received packet.
+    with a new address. It should take care of all the incoming traffic from
+    that specific address, starting with the first received packet.
 
     A session is associated with one file transfer only, and therefore each
     session uses a different transfer socket with a unique TID (transfer
