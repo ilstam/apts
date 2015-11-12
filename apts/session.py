@@ -15,6 +15,8 @@
 
 import socket
 
+from .packets import RRQPacket, WRQPacket, DataPacket, ACKPacket, ErrorPacket
+
 
 class TftpSession:
     """
@@ -57,3 +59,30 @@ class TftpSession:
         Retransmits the last sent packet, due to a socket timeout.
         """
         self.send_packet(self.last_sent)
+
+    def respond_to_packet(self, packet):
+        """
+        Returns an appropriate TftpPacket in response, based on the type of
+        the packet given.
+        """
+        handle_map = {
+            RRQPacket: self.respond_to_RRQ, WRQPacket: self.respond_to_WRQ,
+            DataPacket: self.respond_to_Data, ACKPacket: self.respond_to_ACK,
+            ErrorPacket: self.respond_to_Error
+        }
+        return handle_map[type(packet)](packet)
+
+    def respond_to_RRQ(self, packet):
+        return packet
+
+    def respond_to_WRQ(self, packet):
+        return packet
+
+    def respond_to_Data(self, packet):
+        return packet
+
+    def respond_to_ACK(self, packet):
+        return packet
+
+    def respond_to_Error(self, packet):
+        return packet
