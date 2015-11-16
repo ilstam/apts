@@ -22,14 +22,32 @@ class TftpError(Exception):
     pass
 
 
-class PayloadParseError(TftpError):
+class PacketParseError(TftpError):
     """
-    Payload parse failure.
+    Failed to parse a packet (raw data).
     """
     pass
 
 
-class UnsupportedModeError(TftpError):
+class InvalidOpcodeError(PacketParseError):
+    """
+    A TftpPacket has an invalid TFTP opcode.
+    """
+    def __init__(self, opcode):
+        self.opcode = opcode
+
+    def __str__(self):
+        return "invalid TFTP opcode: {0}".format(self.opcode)
+
+
+class PayloadParseError(PacketParseError):
+    """
+    Failed to parse the payload.
+    """
+    pass
+
+
+class UnsupportedModeError(PayloadParseError):
     """
     An unsupported TFTP mode requested.
     """
@@ -40,7 +58,7 @@ class UnsupportedModeError(TftpError):
         return "unsupported TFTP mode: {0}".format(self.mode)
 
 
-class DataSizeError(TftpError):
+class DataSizeError(PayloadParseError):
     """
     A DataPacket carries more than 512 bytes of data.
     """
@@ -48,7 +66,7 @@ class DataSizeError(TftpError):
         return "512 bytes of data is the max for a packet"
 
 
-class InvalidErrorcodeError(TftpError):
+class InvalidErrorcodeError(PayloadParseError):
     """
     An ErrorPacket has an invalid TFTP error code.
     """

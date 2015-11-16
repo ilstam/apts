@@ -122,11 +122,7 @@ class DataPacket(TftpPacket):
         except struct.error:
             raise PayloadParseError("couldn't extract block number")
 
-        data = payload[2:]
-        if len(data) > 512:
-            raise DataSizeError()
-
-        return cls(blockn, data)
+        return cls(blockn, data=payload[2:])
 
     def to_wire(self):
         return b''.join((struct.pack('!HH', self.opcode, self.blockn), self.data))
@@ -201,6 +197,9 @@ class ErrorPacket(TftpPacket):
         error_msg  -- raw bytes, error message
         """
         self.error_code = error_code
+        if not self.error_code in self.errors.keys():
+            raise InvalidErrorcodeError(self.error_code)
+
         if error_msg is None:
             self.error_msg = self.errors[error_code]
         else:
@@ -214,10 +213,6 @@ class ErrorPacket(TftpPacket):
             raise PayloadParseError("couldn't extract error code")
 
         error_msg = payload[2:].split(TftpPacket.seperator)[0]
-
-        if not error_code in ErrorPacket.errors.keys():
-            raise InvalidErrorcodeError(error_code)
-
         return cls(error_code, error_msg)
 
     def to_wire(self):
