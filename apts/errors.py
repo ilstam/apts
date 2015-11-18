@@ -29,6 +29,14 @@ class PacketParseError(TftpError):
     pass
 
 
+class OpcodeExtractError(PacketParseError):
+    """
+    Failed to extract the opcode of a TftpPacket.
+    """
+    def __str__(self):
+        return "failed to extract packet opcode"
+
+
 class InvalidOpcodeError(PacketParseError):
     """
     A TftpPacket has an invalid TFTP opcode.
