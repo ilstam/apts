@@ -15,8 +15,8 @@
 
 import struct
 
-from .errors import (DataSizeError, InvalidErrorcodeError, PayloadParseError,
-                     UnsupportedModeError)
+from .errors import (DataSizeError, InvalidErrorcodeError, InvalidOpcodeError,
+                     OpcodeExtractError, PayloadParseError, UnsupportedModeError)
 
 
 class TftpPacket:
@@ -218,3 +218,53 @@ class ErrorPacket(TftpPacket):
     def to_wire(self):
         return b''.join((struct.pack('!HH', self.opcode, self.error_code),
                          self.error_msg, self.seperator))
+
+
+class PacketFactory:
+    """
+    This class generates TftpPacket objects by using its create() method.
+    It parses raw data (byte representations of TftpPackets) and creates new
+    instances depending on the extracted opcode.
+    """
+    packet_pool = {
+        RRQPacket.opcode: RRQPacket,
+        WRQPacket.opcode: WRQPacket,
+        DataPacket.opcode: DataPacket,
+        ACKPacket.opcode: ACKPacket,
+        ErrorPacket.opcode: ErrorPacket,
+    }
+
+    def create(self, data):
+        """
+        Creates an appropriate TftpPacket instance, based on the opcode of
+        the given data.
+
+        Keyword arguments:
+        data -- raw bytes representation of a TftpPacket
+
+        Returns a TftpPacket object.
+        May raise a PacketParseError.
+        """
+        opcode, payload = self.split_packet(data)
+
+        try:
+            return self.packet_pool[opcode].from_wire(payload)
+        except KeyError:
+            raise InvalidOpcodeError
+
+    @staticmethod
+    def split_packet(data):
+        """
+        Splits a bytes representation of a TftpPacket into opcode and payload.
+
+        Keyword arguments:
+        data -- raw bytes representation of a TftpPacket
+
+        Returns an opcode, payload tuple.
+        """
+        try:
+            opcode = struct.unpack("!H", data[:2])[0]
+        except struct.error:
+            raise OpcodeExtractError()
+
+        return opcode, data[2:]
