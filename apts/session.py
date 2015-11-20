@@ -15,7 +15,9 @@
 
 import socket
 
-from .packets import RRQPacket, WRQPacket, DataPacket, ACKPacket, ErrorPacket
+from .errors import PacketParseError
+from .packets import (RRQPacket, WRQPacket, DataPacket, ACKPacket, ErrorPacket,
+                      PacketFactory)
 
 
 class TftpSession:
@@ -31,6 +33,8 @@ class TftpSession:
 
     When the file transfer is over, the session is destroyed.
     """
+    factory = PacketFactory()
+
     def __init__(self, local_ip, remote_address):
         """
         Keyword arguments:
@@ -64,6 +68,17 @@ class TftpSession:
         Retransmits the last sent packet, due to a socket timeout.
         """
         self.send_packet(self.last_sent)
+
+    def handle_received_data(self, data):
+        """
+        """
+        try:
+            packet = self.factory.create(data)
+            response_packet = self.respond_to_packet(packet)
+        except PacketParseError:
+            response_packet = ErrorPacket(ErrorPacket.ERR_ILLEGAL_OPERATION)
+
+        self.send_packet(response_packet)
 
     def respond_to_packet(self, packet):
         """
