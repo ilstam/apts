@@ -4,6 +4,9 @@ host = ''
 # Well-known TFTP port number
 port = 69
 
+# Path of the directory from where we serve files and write files to.
+tftp_root = '/srv/tftp/'
+
 # Maximum amount of data to be received at once.
 # Note: For best match with hardware and network realities,
 # the value of bufsize should be a relatively small power of 2.

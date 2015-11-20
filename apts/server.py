@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import socket
 
 from . import config
@@ -20,6 +21,13 @@ from .session import TftpSession
 
 
 class TftpServer:
+    def __init__(self, tftp_root=config.tftp_root):
+        self.tftp_root = tftp_root
+
+        # Change the root directory of the current process for security reasons.
+        # The application must be able to see only what's inside the TFTP root.
+        os.chroot(tftp_root)
+
     def listen(self, ip=config.host, port=config.port):
         """
         Start a server listening on the supplied ip and port.
