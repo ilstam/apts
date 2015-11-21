@@ -60,7 +60,7 @@ class TftpFileReader(TftpFileIO):
 
 class TftpFileWriter(TftpFileIO):
     def __init__(self, filename, mode):
-        super(TftpFileReader, self).__init__(mode)
+        super(TftpFileWriter, self).__init__(mode)
         self._file = open(filename, mode='wb')
 
     def write_next_block(self, data):
