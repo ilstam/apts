@@ -1,8 +1,9 @@
+import os
 import unittest
 from tempfile import NamedTemporaryFile
 
 from apts import netascii
-from apts.file_rw import TftpFileReader
+from apts.file_rw import TftpFileReader, TftpFileWriter
 from apts.errors import TftpIOError
 
 
@@ -43,32 +44,35 @@ def write_temp_file(data):
 class TestTftpFileReader(unittest.TestCase):
     def test_reader_netascii_mode(self):
         # test with a file of less than 512 bytes
-        data = LOREM_IPSUM[300:]
-        fr = TftpFileReader(write_temp_file(data), 'netascii')
-        self.assertEqual(read_whole_file(fr), netascii.encode(data))
-
+        self._test_reader_netascii_mode(LOREM_IPSUM[300:])
         # test with a file of precisely 512 bytes
-        data = LOREM_IPSUM[512:]
-        fr = TftpFileReader(write_temp_file(data), 'netascii')
-        self.assertEqual(read_whole_file(fr), netascii.encode(data))
-
+        self._test_reader_netascii_mode(LOREM_IPSUM[512:])
         # test with a file of more than 512 bytes
-        data = LOREM_IPSUM
-        fr = TftpFileReader(write_temp_file(data), 'netascii')
-        self.assertEqual(read_whole_file(fr), netascii.encode(data))
+        self._test_reader_netascii_mode(LOREM_IPSUM)
 
     def test_reader_octet_mode(self):
-        # test with a file of less than 512 bytes
-        data = LOREM_IPSUM[300:]
-        fr = TftpFileReader(write_temp_file(data), 'octet')
-        self.assertEqual(read_whole_file(fr), data)
+        self._test_reader_octet_mode(LOREM_IPSUM[300:])
+        self._test_reader_octet_mode(LOREM_IPSUM[512:])
+        self._test_reader_octet_mode(LOREM_IPSUM)
 
-        # test with a file of precisely 512 bytes
-        data = LOREM_IPSUM[512:]
-        fr = TftpFileReader(write_temp_file(data), 'octet')
-        self.assertEqual(read_whole_file(fr), data)
+    def _test_reader_netascii_mode(self, data):
+        fname = write_temp_file(data)
+        fr = TftpFileReader(fname, 'netascii')
+        self.assertEqual(read_whole_file(fr), netascii.encode(data))
+        self.assertTrue(fr._file.closed)
+        os.remove(fname)
 
-        # test with a file of more than 512 bytes
-        data = LOREM_IPSUM
-        fr = TftpFileReader(write_temp_file(data), 'octet')
+    def _test_reader_octet_mode(self, data):
+        fname = write_temp_file(data)
+        fr = TftpFileReader(fname, 'octet')
         self.assertEqual(read_whole_file(fr), data)
+        self.assertTrue(fr._file.closed)
+        os.remove(fname)
+
+
+class TestTftpFileWriter(unittest.TestCase):
+    def test_writer_netascii_mode(self):
+        pass
+
+    def test_writer_octet_mode(self):
+        pass
