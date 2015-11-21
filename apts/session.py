@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import socket
 
 from .errors import PacketParseError
@@ -93,16 +94,30 @@ class TftpSession:
         return handle_map[type(packet)](packet)
 
     def respond_to_RRQ(self, packet):
-        return packet
+        if not os.isfile(packet.filename):
+            return ErrorPacket(ErrorPacket.ERR_FILE_NOT_FOUND)
+        # return next_block_of_data()
 
     def respond_to_WRQ(self, packet):
-        return packet
+        if os.isfile(packet.filename):
+            return ErrorPacket(ErrorPacket.ERR_FILE_EXISTS)
+        return ACKPacket(0)
 
     def respond_to_Data(self, packet):
-        return packet
+        # if available_disk_space < len(packet.data):
+            # return ErrorPacket(ErrorPacket.ERR_DISK_FULL)
+        if packet.blockn == self.blockn:
+            # save_new_data()
+            self.blockn += 1
+
+        return ACKPacket(packet.blockn)
 
     def respond_to_ACK(self, packet):
-        return packet
+        # if packet.nblock == self.nblock:
+            # self.nblock += 1
+            # return next_block_of_data()
+        if packet.nblock < self.nblock:
+            return self.last_sent
 
     def respond_to_Error(self, packet):
         return packet
