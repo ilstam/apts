@@ -29,27 +29,28 @@ class TftpFileReader(TftpFileIO):
         super(TftpFileReader, self).__init__(mode)
         self._file = open(filename, mode='rb')
         self._bytes = b''
+        self.netascii_bytes = b''
 
     def read_next_bytes(self):
         if self._file.closed:
             raise TftpIOError("read attemption of closed file")
 
-        b = self._file.read(self.block_size)
-        if len(b) < self.block_size:
+        self._bytes = self._file.read(self.block_size)
+        if len(self._bytes) < self.block_size:
             self._file.close()
-        self._bytes += b
 
     def get_next_block_netascii(self):
-        netascii_bytes = netascii.encode(self._bytes)
-        while len(netascii_bytes) < self.block_size:
+        self.netascii_bytes += netascii.encode(self._bytes)
+        while len(self.netascii_bytes) < self.block_size:
             try:
                 self.read_next_bytes()
-                netascii_bytes = netascii.encode(self._bytes)
+                self.netascii_bytes += netascii.encode(self._bytes)
             except TftpIOError:
                 break
 
-        to_send = netascii_bytes[:self.block_size]
-        self._bytes = self._bytes[self.block_size:]
+        to_send = self.netascii_bytes[:self.block_size]
+        self.netascii_bytes = self.netascii_bytes[self.block_size:]
+        self._bytes = b''
         return to_send
 
     def get_next_block_octet(self):
