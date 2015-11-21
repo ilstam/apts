@@ -55,6 +55,24 @@ class TestTftpFileReader(unittest.TestCase):
         self._test_reader_octet_mode(LOREM_IPSUM[512:])
         self._test_reader_octet_mode(LOREM_IPSUM)
 
+    def test_read_from_closed_file(self):
+        self._test_read_from_closed_file('netascii')
+        self._test_read_from_closed_file('octet')
+
+    def _test_read_from_closed_file(self, mode):
+        """
+        When trying to read from a closed file, a TftpIOError should be raised.
+        """
+        fname = write_temp_file(LOREM_IPSUM)
+        fr = TftpFileReader(fname, mode)
+        read_whole_file(fr)
+
+        self.assertTrue(fr._file.closed)
+        with self.assertRaises(TftpIOError):
+            fr.get_next_block()
+
+        os.remove(fname)
+
     def _test_reader_netascii_mode(self, data):
         fname = write_temp_file(data)
         fr = TftpFileReader(fname, 'netascii')
