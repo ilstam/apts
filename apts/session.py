@@ -79,12 +79,14 @@ class TftpSession:
         except PacketParseError:
             response_packet = ErrorPacket(ErrorPacket.ERR_ILLEGAL_OPERATION)
 
-        self.send_packet(response_packet)
+        if response_packet is not None:
+            self.send_packet(response_packet)
 
     def respond_to_packet(self, packet):
         """
         Returns an appropriate TftpPacket in response, based on the type of
-        the packet given.
+        the packet given. If the return value is None, it means that we should
+        just ignore the received packet and send nothing in response.
         """
         handle_map = {
             RRQPacket: self.respond_to_RRQ, WRQPacket: self.respond_to_WRQ,
@@ -118,6 +120,8 @@ class TftpSession:
             # return next_block_of_data()
         if packet.nblock < self.nblock:
             return self.last_sent
+        return None
 
     def respond_to_Error(self, packet):
-        return packet
+        # As a server we should receive no error packets from a client.
+        return None
