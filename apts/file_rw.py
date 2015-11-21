@@ -27,7 +27,7 @@ class TftpFileReader(TftpFileIO):
     def __init__(self, filename, mode):
         super(TftpFileReader, self).__init__(mode)
         self._file = open(filename, mode='rb')
-        self._bytes = 0
+        self._bytes = b''
 
     def read_next_bytes(self):
         b = self._file.read(self.block_size)
@@ -37,15 +37,19 @@ class TftpFileReader(TftpFileIO):
 
     def get_next_block_netascii(self):
         netascii_bytes = netascii.encode(self._bytes)
-        while len(netascii_bytes) < 512 and not self._file.closed:
+        while len(netascii_bytes) < self.block_size and not self._file.closed:
             self.read_next_bytes()
             netascii_bytes = netascii.encode(self._bytes)
 
-        return netascii_bytes
+        to_send = netascii_bytes[:self.block_size]
+        self._bytes = self._bytes[self.block_size:]
+        return to_send
 
     def get_next_block_octet(self):
         self.read_next_bytes()
-        return self._bytes
+        to_send = self._bytes
+        self._bytes = b''
+        return to_send
 
     def get_next_block(self):
         if self.mode == 'netascii':
