@@ -17,6 +17,7 @@ import os
 import socket
 
 from .errors import PacketParseError
+from .file_rw import TftpFileReader, TftpFileWriter
 from .packets import (RRQPacket, WRQPacket, DataPacket, ACKPacket, ErrorPacket,
                       PacketFactory)
 
@@ -57,6 +58,12 @@ class TftpSession:
         # Save the last packet we sent, to make retransmission easy.
         self.last_sent = None
 
+        # A TftpFileReader instance will be initialized if, and at the time,
+        # we receive a RRQ packet.
+        self.file_reader = None
+        # As above, will be initialized with a WRQ packet.
+        self.file_writer = None
+
     def send_packet(self, packet):
         """
         Sends a TftpPacket to the remote host through the transfer socket.
@@ -96,32 +103,44 @@ class TftpSession:
         return handle_map[type(packet)](packet)
 
     def respond_to_RRQ(self, packet):
-        if not os.isfile(packet.filename):
+        fname, mode = packet.filename.decode(), packet.mode.decode()
+        if not os.isfile(fname):
             return ErrorPacket(ErrorPacket.ERR_FILE_NOT_FOUND)
-        # return next_block_of_data()
+
+        self.file_reader = TftpFileReader(fname, mode)
+
+        data = self.file_reader.get_next_block()
+        self.blockn += 1
+        return DataPacket(self.blockn, data)
 
     def respond_to_WRQ(self, packet):
-        if os.isfile(packet.filename):
+        fname, mode = packet.filename.decode(), packet.mode.decode()
+        if os.isfile(fname):
             return ErrorPacket(ErrorPacket.ERR_FILE_EXISTS)
+
+        self.file_writer = TftpFileWriter(fname, mode)
         return ACKPacket(0)
 
     def respond_to_Data(self, packet):
         # if available_disk_space < len(packet.data):
             # return ErrorPacket(ErrorPacket.ERR_DISK_FULL)
         if packet.blockn == self.blockn:
-            # save_new_data()
+            self.file_writer.write_next_block(packet.data)
             self.blockn += 1
 
         return ACKPacket(packet.blockn)
 
     def respond_to_ACK(self, packet):
-        # if packet.nblock == self.nblock:
-            # self.nblock += 1
-            # return next_block_of_data()
-        if packet.nblock < self.nblock:
+        if packet.blockn == self.blockn:
+            self.blockn += 1
+            data = self.file_reader.get_next_block()
+            return DataPacket(self.blockn, data)
+
+        if packet.blockn < self.blockn:
             return self.last_sent
+
         return None
 
     def respond_to_Error(self, packet):
-        # As a server we should receive no error packets from a client.
+        # As a server we should not receive any error packets from a client.
         return None
