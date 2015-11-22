@@ -122,11 +122,13 @@ class TftpSession:
         return ACKPacket(0)
 
     def respond_to_Data(self, packet):
-        # if available_disk_space < len(packet.data):
-            # return ErrorPacket(ErrorPacket.ERR_DISK_FULL)
         if packet.blockn == self.blockn:
-            self.file_writer.write_next_block(packet.data)
-            self.blockn += 1
+            try:
+                self.file_writer.write_next_block(packet.data)
+                self.blockn += 1
+            except IOError:
+                # No space left on device
+                return ErrorPacket(ErrorPacket.ERR_DISK_FULL)
 
         return ACKPacket(packet.blockn)
 
