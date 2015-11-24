@@ -16,6 +16,7 @@
 import os
 import socket
 
+from . import config
 from .errors import PacketParseError
 from .file_rw import TftpFileReader, TftpFileWriter
 from .packets import (RRQPacket, WRQPacket, DataPacket, ACKPacket, ErrorPacket,
@@ -58,11 +59,35 @@ class TftpSession:
         # Save the last packet we sent, to make retransmission easy.
         self.last_sent = None
 
+        # Each time we retransmit a package, we increase the timeout time.
+        # When and if the values of the following tuple is exhausted, the
+        # transfer is considered failed and the session is terminated.
+        self.timeout_values = (1, 3, 8)
+
+        # Indicates the number of retransmissions of the last sent packet.
+        self.retransmissions = 0
+
         # A TftpFileReader instance will be initialized if, and at the time,
         # we receive a RRQ packet.
         self.file_reader = None
         # As above, will be initialized with a WRQ packet.
         self.file_writer = None
+
+    def listen(self):
+        while True:
+            timeout = self.timeout_values[self.retransmissions]
+            self.transfer_socket.settimeout(timeout)
+
+            try:
+                data, _ = transfer_socket_socket.recvfrom(config.bufsize)
+                self.handle_received_data(data)
+                self.retransmissions = 0
+            except socket.timeout:
+                self.retransmissions += 1
+                if self.retransmissions < len(self.timeout_values):
+                    self.resend_last()
+                else:
+                    break # termination of session
 
     def send_packet(self, packet):
         """
