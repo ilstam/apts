@@ -39,21 +39,23 @@ class TftpSession:
     """
     factory = PacketFactory()
 
-    def __init__(self, local_ip, remote_address, initial_data):
+    def __init__(self, interface, remote_address, tftp_root, initial_data):
         """
         Keyword arguments:
-        local_ip       -- the ip to listen to
+        interface      -- the interface to bind to
         remote_address -- the address of the remote host on a ('ip', port) format
+        tftp_root      -- the TFTP root directory of the server
         intial_data    -- the initial raw data received by the server at the
                           beggining of the transfer with the remote host.
                           should be a read or write request.
         """
         self.remote_address = remote_address
+        self.tftp_root = tftp_root
 
         # We must create a new socket with a random TID for the transfer.
         # Port 0 means that the OS will pick an available port for us.
         self.transfer_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.transfer_socket.bind((local_ip, 0))
+        self.transfer_socket.bind((interface, 0))
 
         # When we receive data, blockn indicates the block number of the next
         # DataPacket that we expect to acknowledge. When we send data, blockn
@@ -141,7 +143,8 @@ class TftpSession:
         if not os.path.isfile(fname):
             return ErrorPacket(ErrorPacket.ERR_FILE_NOT_FOUND)
 
-        self.file_reader = TftpFileReader(fname, mode)
+        path = os.path.join(self.tftp_root, fname)
+        self.file_reader = TftpFileReader(path, mode)
 
         data = self.file_reader.get_next_block()
         self.blockn += 1
@@ -152,7 +155,8 @@ class TftpSession:
         if os.path.isfile(fname):
             return ErrorPacket(ErrorPacket.ERR_FILE_EXISTS)
 
-        self.file_writer = TftpFileWriter(fname, mode)
+        path = os.path.join(self.tftp_root, fname)
+        self.file_writer = TftpFileWriter(path, mode)
         return ACKPacket(0)
 
     def respond_to_Data(self, packet):

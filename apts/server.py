@@ -30,7 +30,7 @@ class TftpServer:
 
     def listen(self, ip=config.host, port=config.port):
         """
-        Start a server listening on the supplied ip and port.
+        Start a server listening on the supplied interface and port.
         """
         # AF_INET for IPv4 family address, SOCK_DGRAM for UDP socket
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -39,7 +39,7 @@ class TftpServer:
         while True:
             data, client_address = server_socket.recvfrom(config.bufsize)
 
-            session = TftpSession(ip, client_address)
+            session = TftpSession(ip, client_address, self.tftp_root, data)
 
 
 def main():
