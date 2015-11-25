@@ -15,6 +15,7 @@
 
 import os
 import socket
+import threading
 
 from . import config
 from .errors import PacketParseError
@@ -38,11 +39,14 @@ class TftpSession:
     """
     factory = PacketFactory()
 
-    def __init__(self, local_ip, remote_address):
+    def __init__(self, local_ip, remote_address, initial_data):
         """
         Keyword arguments:
         local_ip       -- the ip to listen to
         remote_address -- the address of the remote host on a ('ip', port) format
+        intial_data    -- the initial raw data received by the server at the
+                          beggining of the transfer with the remote host.
+                          should be a read or write request.
         """
         self.remote_address = remote_address
 
@@ -59,10 +63,10 @@ class TftpSession:
         # Save the last packet we sent, to make retransmission easy.
         self.last_sent = None
 
-        # Each time we retransmit a package, we increase the timeout time.
-        # When and if the values of the following tuple is exhausted, the
-        # transfer is considered failed and the session is terminated.
-        self.timeout_values = (1, 3, 8)
+        # Each time we retransmit a package, we can have different timeout
+        # values. When and if the values of the following tuple is exhausted,
+        # the transfer is considered failed and the session is terminated.
+        self.timeout_values = (8, 8, 8)
 
         # Indicates the number of retransmissions of the last sent packet.
         self.retransmissions = 0
@@ -73,13 +77,18 @@ class TftpSession:
         # As above, will be initialized with a WRQ packet.
         self.file_writer = None
 
+        listener_thread = threading.Thread(target=self.listen)
+
+        self.handle_received_data(initial_data)
+        listener_thread.start()
+
     def listen(self):
         while True:
             timeout = self.timeout_values[self.retransmissions]
             self.transfer_socket.settimeout(timeout)
 
             try:
-                data, _ = transfer_socket_socket.recvfrom(config.bufsize)
+                data, _ = self.transfer_socket.recvfrom(config.bufsize)
                 self.handle_received_data(data)
                 self.retransmissions = 0
             except socket.timeout:
@@ -87,7 +96,7 @@ class TftpSession:
                 if self.retransmissions < len(self.timeout_values):
                     self.resend_last()
                 else:
-                    break # termination of session
+                    break # session termination
 
     def send_packet(self, packet):
         """
@@ -129,7 +138,7 @@ class TftpSession:
 
     def respond_to_RRQ(self, packet):
         fname, mode = packet.filename.decode(), packet.mode.decode()
-        if not os.isfile(fname):
+        if not os.path.isfile(fname):
             return ErrorPacket(ErrorPacket.ERR_FILE_NOT_FOUND)
 
         self.file_reader = TftpFileReader(fname, mode)
@@ -140,7 +149,7 @@ class TftpSession:
 
     def respond_to_WRQ(self, packet):
         fname, mode = packet.filename.decode(), packet.mode.decode()
-        if os.isfile(fname):
+        if os.path.isfile(fname):
             return ErrorPacket(ErrorPacket.ERR_FILE_EXISTS)
 
         self.file_writer = TftpFileWriter(fname, mode)
