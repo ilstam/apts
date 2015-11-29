@@ -118,7 +118,7 @@ class DataPacket(TftpPacket):
     @classmethod
     def from_wire(cls, payload):
         try:
-            blockn = struct.unpack('!H', payload[:2])
+            blockn = struct.unpack('!H', payload[:2])[0]
         except struct.error:
             raise PayloadParseError("couldn't extract block number")
 
