@@ -63,13 +63,7 @@ class TftpSession:
         # Save the last packet we sent, to make retransmission easy.
         self.last_sent = None
 
-        # Indicates whether the last packet we sent was an error packet.
-        self.sent_error = False
-
-        # If True, it means that we have sent an ACK for the last block of the
-        # file data (the block with less than 512 bytes). Only useful when we
-        # receive data as a server.
-        self.acknowledged_last_data = False
+        self.last_received = None
 
         # Each time we retransmit a package, we can have different timeout
         # values. When and if the values of the following tuple is exhausted,
@@ -100,7 +94,7 @@ class TftpSession:
                 self.handle_received_data(data)
                 self.retransmissions = 0
             except socket.timeout:
-                if self.acknowledged_last_data or self.sent_error:
+                if not self.need_to_retransmit():
                     break # session termination
 
                 self.retransmissions += 1
@@ -115,8 +109,6 @@ class TftpSession:
         """
         self.transfer_socket.sendto(packet.to_wire(), self.remote_address)
         self.last_sent = packet
-        if isinstance(self.last_sent, ErrorPacket):
-            self.sent_error = True
 
     def resend_last(self):
         """
@@ -124,11 +116,29 @@ class TftpSession:
         """
         self.send_packet(self.last_sent)
 
+    def need_to_retransmit(self):
+        """
+        Checks whether the last sent packet needs retransmission after a
+        socket timeout.
+
+        We do not retransmit error packets or ACK packets for the last block
+        of data. We do not expect a response for both of these types (although
+        sometimes the remote host will acknowledge the error packets).
+
+        Returns True if we need to retransmit the last packet, else False.
+        """
+        if isinstance(self.last_sent, ErrorPacket):
+            return False
+        if isinstance(self.last_received, DataPacket):
+            return not self.last_received.is_last
+        return True
+
     def handle_received_data(self, data):
         """
         """
         try:
             packet = self.factory.create(data)
+            self.last_received = packet
             response_packet = self.respond_to_packet(packet)
         except PacketParseError:
             response_packet = ErrorPacket(ErrorPacket.ERR_ILLEGAL_OPERATION)
@@ -183,7 +193,6 @@ class TftpSession:
                 # No space left on device
                 return ErrorPacket(ErrorPacket.ERR_DISK_FULL)
 
-        self.acknowledged_last_data = packet.is_last
         return ACKPacket(packet.blockn)
 
     def respond_to_ACK(self, packet):
