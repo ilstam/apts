@@ -63,6 +63,11 @@ class TftpSession:
         # Save the last packet we sent, to make retransmission easy.
         self.last_sent = None
 
+        # If True, it means that we have sent an ACK for the last block of the
+        # file data (the block with less than 512 bytes). Only useful when we
+        # receive data as a server.
+        self.acknowledged_last_data = False
+
         # Each time we retransmit a package, we can have different timeout
         # values. When and if the values of the following tuple is exhausted,
         # the transfer is considered failed and the session is terminated.
@@ -92,6 +97,11 @@ class TftpSession:
                 self.handle_received_data(data)
                 self.retransmissions = 0
             except socket.timeout:
+                if self.acknowledged_last_data:
+                    # We sent an ACK for the last block of data, we didn't get
+                    # anything back, so we can safely terminate the connection.
+                    break
+
                 self.retransmissions += 1
                 if self.retransmissions < len(self.timeout_values):
                     self.resend_last()
@@ -170,6 +180,7 @@ class TftpSession:
                 # No space left on device
                 return ErrorPacket(ErrorPacket.ERR_DISK_FULL)
 
+        self.acknowledged_last_data = packet.is_last
         return ACKPacket(packet.blockn)
 
     def respond_to_ACK(self, packet):
