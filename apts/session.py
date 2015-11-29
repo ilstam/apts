@@ -79,6 +79,9 @@ class TftpSession:
         # As above, will be initialized with a WRQ packet.
         self.file_writer = None
 
+        # When True, we stop listening for new packets.
+        self.end_of_session = False
+
         listener_thread = threading.Thread(target=self.listen)
 
         self.handle_received_data(initial_data)
@@ -93,6 +96,9 @@ class TftpSession:
                 data, _ = self.transfer_socket.recvfrom(config.bufsize)
                 self.handle_received_data(data)
                 self.retransmissions = 0
+
+                if self.end_of_session:
+                    break
             except socket.timeout:
                 if not self.need_to_retransmit():
                     break # session termination
@@ -161,7 +167,9 @@ class TftpSession:
 
     def respond_to_RRQ(self, packet):
         fname, mode = packet.filename.decode(), packet.mode.decode()
-        if not os.path.isfile(fname):
+        path = os.path.join('/', fname)
+
+        if not os.path.isfile(path):
             return ErrorPacket(ErrorPacket.ERR_FILE_NOT_FOUND)
 
         path = os.path.join('/', fname)
@@ -197,6 +205,9 @@ class TftpSession:
 
     def respond_to_ACK(self, packet):
         if packet.blockn == self.blockn:
+            if isinstance(self.last_sent, DataPacket) and self.last_sent.is_last:
+                self.end_of_session = True
+                return None
             self.blockn += 1
             data = self.file_reader.get_next_block()
             return DataPacket(self.blockn, data)
@@ -204,8 +215,8 @@ class TftpSession:
         if packet.blockn < self.blockn:
             return self.last_sent
 
-        return None
+        return ErrorPacket(ErrorPacket.ERR_UNKNOWN_TID)
 
     def respond_to_Error(self, packet):
         # As a server we should not receive any error packets from a client.
-        return None
+        return ErrorPacket(ErrorPacket.ERR_UNKNOWN_TID)
