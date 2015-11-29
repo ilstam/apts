@@ -201,7 +201,7 @@ class ErrorPacket(TftpPacket):
             raise InvalidErrorcodeError(self.error_code)
 
         if error_msg is None:
-            self.error_msg = self.errors[error_code]
+            self.error_msg = self.errors[error_code].encode()
         else:
             self.error_msg = error_msg
 
