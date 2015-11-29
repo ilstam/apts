@@ -63,6 +63,9 @@ class TftpSession:
         # Save the last packet we sent, to make retransmission easy.
         self.last_sent = None
 
+        # Indicates whether the last packet we sent was an error packet.
+        self.sent_error = False
+
         # If True, it means that we have sent an ACK for the last block of the
         # file data (the block with less than 512 bytes). Only useful when we
         # receive data as a server.
@@ -97,10 +100,8 @@ class TftpSession:
                 self.handle_received_data(data)
                 self.retransmissions = 0
             except socket.timeout:
-                if self.acknowledged_last_data:
-                    # We sent an ACK for the last block of data, we didn't get
-                    # anything back, so we can safely terminate the connection.
-                    break
+                if self.acknowledged_last_data or self.sent_error:
+                    break # session termination
 
                 self.retransmissions += 1
                 if self.retransmissions < len(self.timeout_values):
@@ -114,6 +115,8 @@ class TftpSession:
         """
         self.transfer_socket.sendto(packet.to_wire(), self.remote_address)
         self.last_sent = packet
+        if isinstance(self.last_sent, ErrorPacket):
+            self.sent_error = True
 
     def resend_last(self):
         """
