@@ -17,7 +17,7 @@ import os
 import socket
 
 from . import config
-from .session import TftpSession
+from .session import TftpSessionThread
 
 
 class TftpServer:
@@ -39,7 +39,8 @@ class TftpServer:
         while True:
             data, client_address = server_socket.recvfrom(config.bufsize)
 
-            session = TftpSession(ip, client_address, data)
+            session_thread = TftpSessionThread(ip, client_address, data)
+            session_thread.start()
 
 
 def main():

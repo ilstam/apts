@@ -24,11 +24,12 @@ from .packets import (RRQPacket, WRQPacket, DataPacket, ACKPacket, ErrorPacket,
                       PacketFactory)
 
 
-class TftpSession:
+class TftpSessionThread(threading.Thread):
     """
-    A new session must be created in the beggining of the communication
-    with a new address. It should take care of all the incoming traffic from
-    that specific address, starting with the first received packet.
+    Each file transfer should happen on a TftpSessionThread that runs on a
+    separate thread. The session should take care of all the incoming traffic
+    for this specific "imaginary" connection, starting with the first received
+    packet.
 
     A session is associated with one file transfer only, and therefore each
     session uses a different transfer socket with a unique TID (transfer
@@ -48,7 +49,10 @@ class TftpSession:
                           beggining of the transfer with the remote host.
                           should be a read or write request.
         """
+        super().__init__()
+
         self.remote_address = remote_address
+        self.initial_data = initial_data
 
         # We must create a new socket with a random TID for the transfer.
         # Port 0 means that the OS will pick an available port for us.
@@ -82,12 +86,9 @@ class TftpSession:
         # When True, we stop listening for new packets.
         self.end_of_session = False
 
-        listener_thread = threading.Thread(target=self.listen)
+    def run(self):
+        self.handle_received_data(self.initial_data)
 
-        self.handle_received_data(initial_data)
-        listener_thread.start()
-
-    def listen(self):
         while True:
             timeout = self.timeout_values[self.retransmissions]
             self.transfer_socket.settimeout(timeout)
