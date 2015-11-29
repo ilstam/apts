@@ -155,9 +155,13 @@ class TftpSession:
 
         path = os.path.join('/', fname)
         self.file_writer = TftpFileWriter(path, mode)
+        self.blockn = 1
         return ACKPacket(0)
 
     def respond_to_Data(self, packet):
+        if packet.blockn > self.blockn:
+            return ErrorPacket(ErrorPacket.ERR_UNKNOWN_TID)
+
         if packet.blockn == self.blockn:
             try:
                 self.file_writer.write_next_block(packet.data)
