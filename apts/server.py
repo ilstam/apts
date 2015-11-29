@@ -39,7 +39,7 @@ class TftpServer:
         while True:
             data, client_address = server_socket.recvfrom(config.bufsize)
 
-            session = TftpSession(ip, client_address, self.tftp_root, data)
+            session = TftpSession(ip, client_address, data)
 
 
 def main():
