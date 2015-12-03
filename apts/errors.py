@@ -85,7 +85,14 @@ class InvalidErrorcodeError(PayloadParseError):
         return "unknown TFTP error code: {0}".format(self.error_code)
 
 
-class TftpIOError(Exception):
+class TftpRootError(TftpError):
+    """
+    Exception class for TFTP root errors.
+    """
+    pass
+
+
+class TftpIOError(TftpError):
     """
     Base exception class for Tftp I/O errors.
     """

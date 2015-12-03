@@ -14,15 +14,31 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import socket
 
 from . import config
 from .session import TftpSessionThread
+from .errors import TftpRootError
 
 
 class TftpServer:
-    def __init__(self, tftp_root=config.tftp_root):
+    def __init__(self, tftp_root=config.tftp_root, writable=config.writable):
+        """
+        Keyword arguments:
+        tftp_root -- path to the tftp root directory
+        writable  -- if True, the server is writable
+                     else, a client can only read existing files
+        """
         self.tftp_root = tftp_root
+        self.writable = writable
+
+        try:
+            self.check_tftp_root(writable)
+        except TftpRootError as e:
+            print(e)
+            print("Aborting...")
+            sys.exit(1)
 
         # Change the root directory of the current process for security reasons.
         # The application must be able to see only what's inside the TFTP root.
@@ -41,6 +57,25 @@ class TftpServer:
 
             session_thread = TftpSessionThread(ip, client_address, data)
             session_thread.start()
+
+    def check_tftp_root(self, writable):
+        """
+        Perform sanity checks on the tftp root path.
+
+        Keyword arguments:
+        writable - if True, check if the path is writable
+
+        Returns None if the path passes all the checks.
+        Otherwise, raises an TftpRootError with an appropriate message.
+        """
+        if not os.path.exists(self.tftp_root):
+            raise TftpRootError("The TFTP root does not exist.")
+        if not os.path.isdir(self.tftp_root):
+            raise TftpRootError("The TFTP root must be a directory.")
+        if not os.access(self.tftp_root, os.R_OK):
+            raise TftpRootError("The TFTP root must be readable.")
+        if writable and not os.access(self.tftp_root, os.W_OK):
+            raise TftpRootError("The TFTP root must be writable.")
 
 
 def main():
