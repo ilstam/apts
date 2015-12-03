@@ -55,7 +55,8 @@ class TftpServer:
         while True:
             data, client_address = server_socket.recvfrom(config.bufsize)
 
-            session_thread = TftpSessionThread(ip, client_address, data)
+            session_thread = TftpSessionThread(ip, client_address,
+                                               self.writable, data)
             session_thread.start()
 
     def check_tftp_root(self, writable):

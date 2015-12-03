@@ -40,11 +40,12 @@ class TftpSessionThread(threading.Thread):
     """
     factory = PacketFactory()
 
-    def __init__(self, interface, remote_address, initial_data):
+    def __init__(self, interface, remote_address, allow_write, initial_data):
         """
         Keyword arguments:
         interface      -- the interface to bind to
         remote_address -- the address of the remote host on a ('ip', port) format
+        allow_write    -- if False, reject all WRQs
         intial_data    -- the initial raw data received by the server at the
                           beggining of the transfer with the remote host.
                           should be a read or write request.
@@ -53,6 +54,7 @@ class TftpSessionThread(threading.Thread):
 
         self.remote_address = remote_address
         self.initial_data = initial_data
+        self.allow_write = allow_write
 
         # We must create a new socket with a random TID for the transfer.
         # Port 0 means that the OS will pick an available port for us.
@@ -173,7 +175,6 @@ class TftpSessionThread(threading.Thread):
         if not os.path.isfile(path):
             return ErrorPacket(ErrorPacket.ERR_FILE_NOT_FOUND)
 
-        path = os.path.join('/', fname)
         self.file_reader = TftpFileReader(path, mode)
 
         data = self.file_reader.get_next_block()
@@ -181,10 +182,11 @@ class TftpSessionThread(threading.Thread):
         return DataPacket(self.blockn, data)
 
     def respond_to_WRQ(self, packet):
-        fname, mode = packet.filename.decode(), packet.mode.decode()
-        if os.path.isfile(fname):
-            return ErrorPacket(ErrorPacket.ERR_FILE_EXISTS)
+        if not self.allow_write:
+            error_msg = "Permission denied".encode()
+            return ErrorPacket(ErrorPacket.ERR_NOT_DEFINED, error_msg)
 
+        fname, mode = packet.filename.decode(), packet.mode.decode()
         path = os.path.join('/', fname)
         self.file_writer = TftpFileWriter(path, mode)
         self.blockn = 1
