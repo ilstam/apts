@@ -250,7 +250,7 @@ class PacketFactory:
         try:
             return self.packet_pool[opcode].from_wire(payload)
         except KeyError:
-            raise InvalidOpcodeError
+            raise InvalidOpcodeError(opcode)
 
     @staticmethod
     def split_packet(data):
