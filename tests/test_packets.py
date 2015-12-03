@@ -1,10 +1,10 @@
 import struct
 import unittest
 
-from apts.errors import (DataSizeError, PayloadParseError,
-                         InvalidErrorcodeError, UnsupportedModeError)
 from apts.packets import (RQPacket, RRQPacket, WRQPacket, DataPacket,
                           ACKPacket, ErrorPacket, PacketFactory)
+from apts.errors import (DataSizeError, OpcodeExtractError, PayloadParseError,
+                         InvalidOpcodeError, InvalidErrorcodeError, UnsupportedModeError)
 
 
 class TestRQPacket(unittest.TestCase):
@@ -20,12 +20,12 @@ class TestRQPacket(unittest.TestCase):
         raw_data = 'blahblahblahblah'.encode()
 
         with self.assertRaises(PayloadParseError):
-            packet = RQPacket.from_wire(raw_data)
+            RQPacket.from_wire(raw_data)
 
         filename, mode = ('file'.encode(), 'nomode'.encode())
         raw_data = b''.join((filename, b'\x00', mode, b'\x00'))
         with self.assertRaises(UnsupportedModeError):
-            packet = RQPacket.from_wire(raw_data)
+            RQPacket.from_wire(raw_data)
 
 
 class TestRRQPacket(unittest.TestCase):
@@ -82,7 +82,7 @@ class TestDataPacket(unittest.TestCase):
         raw_data = 'b'.encode()
 
         with self.assertRaises(PayloadParseError):
-            packet = DataPacket.from_wire(raw_data)
+            DataPacket.from_wire(raw_data)
 
     def test_to_wire(self):
         opcode, blockn, data = (DataPacket.opcode, 7, 'data ελληνικά'.encode())
@@ -124,7 +124,7 @@ class TestACKPacket(unittest.TestCase):
         raw_data = 'b'.encode()
 
         with self.assertRaises(PayloadParseError):
-            packet = ACKPacket.from_wire(raw_data)
+            ACKPacket.from_wire(raw_data)
 
     def test_to_wire(self):
         opcode, blockn = (ACKPacket.opcode, 12)
@@ -154,12 +154,12 @@ class TestErrorPacket(unittest.TestCase):
         raw_data = 'b'.encode()
 
         with self.assertRaises(PayloadParseError):
-            packet = DataPacket.from_wire(raw_data)
+            DataPacket.from_wire(raw_data)
 
         code, message = (9, 'message ελληνικά'.encode())
         raw_data = b''.join((struct.pack('!H', code), message))
         with self.assertRaises(InvalidErrorcodeError):
-            packet = ErrorPacket.from_wire(raw_data)
+            ErrorPacket.from_wire(raw_data)
 
     def test_to_wire(self):
         opcode, code, message = (ErrorPacket.opcode, 1, 'message ελληνικά'.encode())
@@ -175,3 +175,26 @@ class TestErrorPacket(unittest.TestCase):
         """
         packet = ErrorPacket(5)
         self.assertTrue(packet.error_msg)
+
+
+class TestPacketFactory(unittest.TestCase):
+    def test_create_good_input(self):
+        factory = PacketFactory()
+
+        p = WRQPacket('file'.encode(), 'netascii'.encode())
+        self.assertTrue(isinstance(factory.create(p.to_wire()), WRQPacket))
+        p = DataPacket(4, 'data'.encode())
+        self.assertTrue(isinstance(factory.create(p.to_wire()), DataPacket))
+        p = ACKPacket(12)
+        self.assertTrue(isinstance(factory.create(p.to_wire()), ACKPacket))
+        p = ErrorPacket(1)
+        self.assertTrue(isinstance(factory.create(p.to_wire()), ErrorPacket))
+
+    def test_create_bad_input(self):
+        factory = PacketFactory()
+
+        with self.assertRaises(InvalidOpcodeError):
+            factory.create('blahblahblah'.encode())
+
+        with self.assertRaises(OpcodeExtractError):
+            factory.create('b'.encode())
