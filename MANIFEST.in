@@ -1,0 +1,4 @@
+include AUTHORS LICENSE launcher
+include bin/apts
+include test/*
+recursive-exclude ffmulticonverter *.pyc
