@@ -37,3 +37,9 @@ Further plans (TODO)
 * Add IPv6 support.
 * Write systemd service files.
 * Windows port.
+
+***IMPORTANT NOTICE***
+=======================
+The software hasn't already been thoroughly tested.
+PLEASE DO NOT USE IN PRODUCTION (YET), or do so at your own risk.
+The software is provided "as is", without warranty of any kind.
