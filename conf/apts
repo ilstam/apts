@@ -1,0 +1,9 @@
+[SERVER]
+port = 69
+
+# Path of the directory from where we serve files and write files to.
+tftp_root = /srv/tftp/
+
+# If True, allow files to written. Else, the server runs on read-only
+# mode and a TFTP client can only read existing files.
+writable = True

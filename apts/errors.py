@@ -97,3 +97,10 @@ class TftpIOError(TftpError):
     Base exception class for Tftp I/O errors.
     """
     pass
+
+
+class ParseConfigError(Exception):
+    """
+    Failed to parse the configuration file.
+    """
+    pass

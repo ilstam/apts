@@ -1,3 +1,9 @@
+import sys
+import configparser
+
+from .errors import ParseConfigError
+
+
 # Symbolic name, meaning all available interfaces.
 host = ''
 
@@ -15,3 +21,37 @@ writable = True
 # Note: For best match with hardware and network realities,
 # the value of bufsize should be a relatively small power of 2.
 bufsize = 2048
+
+
+config_parser = configparser.ConfigParser()
+config_parser.read('/etc/conf.d/apts')
+
+try:
+    try:
+        port = int(config_parser['SERVER']['port'])
+    except ValueError:
+        raise ParseConfigError("Failed to parse port value.")
+    except KeyError:
+        pass
+
+    try:
+        tftp_root = config_parser['SERVER']['tftp_root']
+    except KeyError:
+        pass
+
+    try:
+        writable = config_parser['SERVER']['writable']
+
+        if writable == 'True':
+            writable = True
+        elif writable == 'False':
+            writable = False
+        else:
+            raise ParseConfigError("Failed to parse writable value.")
+    except KeyError:
+        pass
+
+except ParseConfigError as e:
+    print(e)
+    print("Aborting...")
+    sys.exit(2)
