@@ -24,6 +24,15 @@ writable = True
 bufsize = 2048
 
 
+# exit codes
+
+EXIT_NORMAL = 0
+EXIT_CONF_ERROR = 1
+EXIT_ROOTDIR_ERROR = 2
+
+
+# parse the configuration file
+
 config_parser = configparser.ConfigParser()
 config_parser.read('/etc/conf.d/apts')
 
@@ -55,4 +64,4 @@ try:
 except ParseConfigError as e:
     logging.error("Configuration error: " + str(e))
     logging.info("Aborting.")
-    sys.exit(2)
+    sys.exit(EXIT_CONF_ERROR)

@@ -39,7 +39,7 @@ class TftpServer:
         except TftpRootError as e:
             logging.error(e)
             logging.info("Terminating the server.")
-            sys.exit(1)
+            sys.exit(config.EXIT_ROOTDIR_ERROR)
 
         # Change the root directory of the current process for security reasons.
         # The application must be able to see only what's inside the TFTP root.
