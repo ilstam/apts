@@ -16,6 +16,7 @@
 import os
 import sys
 import socket
+import logging
 
 from . import config
 from .session import TftpSessionThread
@@ -36,8 +37,8 @@ class TftpServer:
         try:
             self.check_tftp_root(writable)
         except TftpRootError as e:
-            print(e)
-            print("Aborting...")
+            logging.error(e)
+            logging.info("Terminating the server.")
             sys.exit(1)
 
         # Change the root directory of the current process for security reasons.
@@ -52,8 +53,12 @@ class TftpServer:
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         server_socket.bind((ip, port))
 
+        logging.info('Start listening on port {}'.format(port))
+
         while True:
             data, client_address = server_socket.recvfrom(config.bufsize)
+            logging.info('Received data on the main socket from {}'.format(
+                         client_address[0]))
 
             session_thread = TftpSessionThread(ip, client_address,
                                                self.writable, data)

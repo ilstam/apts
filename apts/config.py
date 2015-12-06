@@ -1,4 +1,5 @@
 import sys
+import logging
 import configparser
 
 from .errors import ParseConfigError
@@ -52,6 +53,6 @@ try:
         pass
 
 except ParseConfigError as e:
-    print(e)
-    print("Aborting...")
+    logging.error("Configuration error: " + str(e))
+    logging.info("Aborting.")
     sys.exit(2)
