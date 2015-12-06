@@ -79,13 +79,22 @@ class RQPacket(TftpPacket):
         return b''.join((struct.pack("!H", self.opcode), self.filename,
                          self.seperator, self.mode, self.seperator))
 
+    def __str__(self):
+        return "filename='{}' mode='{}'".format(
+                self.filename.decode(), self.mode.decode())
+
 
 class RRQPacket(RQPacket):
     opcode = 1
 
+    def __str__(self):
+        return "[RRQ] " + super().__str__()
 
 class WRQPacket(RQPacket):
     opcode = 2
+
+    def __str__(self):
+        return "[WRQ] " + super().__str__()
 
 
 class DataPacket(TftpPacket):
@@ -127,6 +136,10 @@ class DataPacket(TftpPacket):
     def to_wire(self):
         return b''.join((struct.pack('!HH', self.opcode, self.blockn), self.data))
 
+    def __str__(self):
+        return "[DATA] blockn={} bytes_of_data={}".format(
+                self.blockn, len(self.data))
+
 
 class ACKPacket(TftpPacket):
     """
@@ -158,6 +171,9 @@ class ACKPacket(TftpPacket):
     def to_wire(self):
         return struct.pack('!HH', self.opcode, self.blockn)
 
+    def __str__(self):
+        return "[ACK] blockn={}".format(self.blockn)
+
 
 class ErrorPacket(TftpPacket):
     """
@@ -180,7 +196,7 @@ class ErrorPacket(TftpPacket):
     ERR_NO_SUCH_USER = 7
 
     errors = {
-        ERR_NOT_DEFINED: "Not defined, see error message (if any)",
+        ERR_NOT_DEFINED: "",
         ERR_FILE_NOT_FOUND: "File not found",
         ERR_ACCESS_VIOLATION: "Access violation",
         ERR_DISK_FULL: "Disk full or allocation exceeded",
@@ -218,6 +234,10 @@ class ErrorPacket(TftpPacket):
     def to_wire(self):
         return b''.join((struct.pack('!HH', self.opcode, self.error_code),
                          self.error_msg, self.seperator))
+
+    def __str__(self):
+        return "[ERROR] code={} message='{}'".format(
+                self.error_code, self.error_msg.decode())
 
 
 class PacketFactory:
