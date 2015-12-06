@@ -15,6 +15,7 @@
 
 import os
 import socket
+import logging
 import threading
 
 from . import config
@@ -60,6 +61,10 @@ class TftpSessionThread(threading.Thread):
         # Port 0 means that the OS will pick an available port for us.
         self.transfer_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.transfer_socket.bind((interface, 0))
+        self.tid = self.transfer_socket.getsockname()[1]
+
+        logging.info('Initialized new connection from {} with TID={}'\
+                     .format(remote_address[0], self.tid))
 
         # When we receive data, blockn indicates the block number of the next
         # DataPacket that we expect to acknowledge. When we send data, blockn
@@ -112,12 +117,15 @@ class TftpSessionThread(threading.Thread):
                 else:
                     break # session termination
 
+        logging.info('Connection with TID={} closed'.format(self.tid))
+
     def send_packet(self, packet):
         """
         Sends a TftpPacket to the remote host through the transfer socket.
         """
         self.transfer_socket.sendto(packet.to_wire(), self.remote_address)
         self.last_sent = packet
+        logging.info("[Sent TID={}] ".format(self.tid) + str(packet))
 
     def resend_last(self):
         """
@@ -147,6 +155,7 @@ class TftpSessionThread(threading.Thread):
         """
         try:
             packet = self.factory.create(data)
+            logging.info("[Recv TID={}] ".format(self.tid) + str(packet))
             self.last_received = packet
             response_packet = self.respond_to_packet(packet)
         except PacketParseError:

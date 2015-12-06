@@ -57,8 +57,6 @@ class TftpServer:
 
         while True:
             data, client_address = server_socket.recvfrom(config.bufsize)
-            logging.info('Received data on the main socket from {}'.format(
-                         client_address[0]))
 
             session_thread = TftpSessionThread(ip, client_address,
                                                self.writable, data)
