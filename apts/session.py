@@ -66,9 +66,6 @@ class TftpSessionThread(threading.Thread):
         self.transfer_socket.bind((interface, 0))
         self.tid = self.transfer_socket.getsockname()[1]
 
-        logging.info('Initialized new connection from {} with TID={}'\
-                     .format(remote_address[0], self.tid))
-
         # When we receive data, blockn indicates the block number of the next
         # DataPacket that we expect to acknowledge. When we send data, blockn
         # indicates the block number of the last sent DataPacket.
@@ -93,19 +90,34 @@ class TftpSessionThread(threading.Thread):
         # As above, will be initialized with a WRQ packet.
         self.file_writer = None
 
-        # When True, we stop listening for new packets.
+        # When True, we're done listening for new packets.
         self.end_of_session = False
 
-    def run(self):
-        self.handle_received_data(self.initial_data)
+        self.respond_map = {
+            RRQPacket: self.respond_to_RRQ, WRQPacket: self.respond_to_WRQ,
+            DataPacket: self.respond_to_Data, ACKPacket: self.respond_to_ACK,
+            ErrorPacket: self.respond_to_Error
+        }
 
+        logging.info('Initialized new connection from {} with TID={}'\
+                     .format(remote_address[0], self.tid))
+
+    def run(self):
         while True:
             timeout = self.timeout_values[self.retransmissions]
             self.transfer_socket.settimeout(timeout)
 
             try:
-                data, _ = self.transfer_socket.recvfrom(config.bufsize)
-                self.handle_received_data(data)
+                # In the first iteration of the loop we use the initial data
+                # as input. After that, we always wait new data from the socket.
+                if self.initial_data is not None:
+                    data = self.initial_data
+                    self.initial_data = None
+                else:
+                    data, _ = self.transfer_socket.recvfrom(config.bufsize)
+
+                response_packet = self.respond_to_data(data)
+                self.send_packet(response_packet)
                 self.retransmissions = 0
 
                 if self.end_of_session:
@@ -126,6 +138,9 @@ class TftpSessionThread(threading.Thread):
         """
         Sends a TftpPacket to the remote host through the transfer socket.
         """
+        if packet is None:
+            return
+
         self.transfer_socket.sendto(packet.to_wire(), self.remote_address)
         self.last_sent = packet
         logging.info("[Sent TID={}] ".format(self.tid) + str(packet))
@@ -141,44 +156,34 @@ class TftpSessionThread(threading.Thread):
         Checks whether the last sent packet needs retransmission after a
         socket timeout.
 
-        We do not retransmit error packets or ACK packets for the last block
-        of data. We do not expect a response for both of these types (although
-        sometimes the remote host will acknowledge the error packets).
-
         Returns True if we need to retransmit the last packet, else False.
         """
+        # We do not retransmit error packets or ACK packets for the last block
+        # of data. We do not expect a response for both of these types (although
+        # sometimes the remote host will acknowledge the error packets).
+
         if isinstance(self.last_sent, ErrorPacket):
             return False
         if isinstance(self.last_received, DataPacket):
             return not self.last_received.is_last
+
         return True
 
-    def handle_received_data(self, data):
+    def respond_to_data(self, data):
         """
+        Creates an appropriate TftpPacket as a response to the received raw
+        data, based on the type of packet of the received data.
+
+        Returns a TftpPacket or None. None as a return value means that we
+        should just ignore the received data and send nothing in response.
         """
         try:
             packet = self.factory.create(data)
             logging.info("[Recv TID={}] ".format(self.tid) + str(packet))
             self.last_received = packet
-            response_packet = self.respond_to_packet(packet)
+            return self.respond_map[type(packet)](packet)
         except PacketParseError:
-            response_packet = ErrorPacket(ErrorPacket.ERR_ILLEGAL_OPERATION)
-
-        if response_packet is not None:
-            self.send_packet(response_packet)
-
-    def respond_to_packet(self, packet):
-        """
-        Returns an appropriate TftpPacket in response, based on the type of
-        the packet given. If the return value is None, it means that we should
-        just ignore the received packet and send nothing in response.
-        """
-        handle_map = {
-            RRQPacket: self.respond_to_RRQ, WRQPacket: self.respond_to_WRQ,
-            DataPacket: self.respond_to_Data, ACKPacket: self.respond_to_ACK,
-            ErrorPacket: self.respond_to_Error
-        }
-        return handle_map[type(packet)](packet)
+            return ErrorPacket(ErrorPacket.ERR_ILLEGAL_OPERATION)
 
     def respond_to_RRQ(self, packet):
         fname, mode = packet.filename.decode(), packet.mode.decode()
