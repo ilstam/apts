@@ -33,7 +33,7 @@ class TftpServer:
         writable  -- if True, the server is writable
                      else, a client can only read existing files
         """
-        self.tftp_root = tftp_root
+        self.tftp_root = os.path.realpath(tftp_root)
         self.writable = writable
 
         try:
@@ -42,6 +42,8 @@ class TftpServer:
             logging.error(e)
             logging.info("Terminating the server")
             sys.exit(config.EXIT_ROOTDIR_ERROR)
+
+        logging.info("TFTP root directory set to: {}".format(self.tftp_root))
 
     def listen(self, ip=config.host, port=config.port):
         """
@@ -65,8 +67,8 @@ class TftpServer:
         while True:
             data, client_address = server_socket.recvfrom(config.bufsize)
 
-            session_thread = TftpSessionThread(ip, client_address,
-                                               self.writable, data)
+            session_thread = TftpSessionThread(
+                ip, client_address, self.tftp_root, self.writable, data)
             session_thread.start()
 
     def check_tftp_root(self, writable):

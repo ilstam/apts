@@ -41,11 +41,13 @@ class TftpSessionThread(threading.Thread):
     """
     factory = PacketFactory()
 
-    def __init__(self, interface, remote_address, allow_write, initial_data):
+    def __init__(self, interface, remote_address, tftp_root, allow_write,
+                 initial_data):
         """
         Keyword arguments:
         interface      -- the interface to bind to
-        remote_address -- the address of the remote host on a ('ip', port) format
+        remote_address -- the address of the remote host in a (ip, port) format
+        tftp_root      -- canonical path of the tftp root directory
         allow_write    -- if False, reject all WRQs
         intial_data    -- the initial raw data received by the server at the
                           beggining of the transfer with the remote host.
@@ -55,6 +57,7 @@ class TftpSessionThread(threading.Thread):
 
         self.remote_address = remote_address
         self.initial_data = initial_data
+        self.tftp_root = tftp_root
         self.allow_write = allow_write
 
         # We must create a new socket with a random TID for the transfer.
@@ -179,15 +182,15 @@ class TftpSessionThread(threading.Thread):
 
     def respond_to_RRQ(self, packet):
         fname, mode = packet.filename.decode(), packet.mode.decode()
-        path = os.path.join('/', fname)
+        path = os.path.join(self.tftp_root, fname)
 
         if not os.path.isfile(path):
             return ErrorPacket(ErrorPacket.ERR_FILE_NOT_FOUND)
 
         self.file_reader = TftpFileReader(path, mode)
-
         data = self.file_reader.get_next_block()
-        self.blockn += 1
+        self.blockn = 1
+
         return DataPacket(self.blockn, data)
 
     def respond_to_WRQ(self, packet):
@@ -196,9 +199,11 @@ class TftpSessionThread(threading.Thread):
             return ErrorPacket(ErrorPacket.ERR_NOT_DEFINED, error_msg)
 
         fname, mode = packet.filename.decode(), packet.mode.decode()
-        path = os.path.join('/', fname)
+        path = os.path.join(self.tftp_root, fname)
+
         self.file_writer = TftpFileWriter(path, mode)
         self.blockn = 1
+
         return ACKPacket(0)
 
     def respond_to_Data(self, packet):
