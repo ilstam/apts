@@ -182,9 +182,10 @@ class TftpSessionThread(threading.Thread):
 
     def respond_to_RRQ(self, packet):
         fname, mode = packet.filename.decode(), packet.mode.decode()
-        path = os.path.join(self.tftp_root, fname)
+        path = os.path.realpath(os.path.join(self.tftp_root, fname))
 
-        if not os.path.isfile(path):
+        # Ensure that file exists and resides inside the tftp root.
+        if not os.path.isfile(path) or not path.startswith(self.tftp_root):
             return ErrorPacket(ErrorPacket.ERR_FILE_NOT_FOUND)
 
         self.file_reader = TftpFileReader(path, mode)
@@ -194,12 +195,11 @@ class TftpSessionThread(threading.Thread):
         return DataPacket(self.blockn, data)
 
     def respond_to_WRQ(self, packet):
-        if not self.allow_write:
-            error_msg = "Permission denied".encode()
-            return ErrorPacket(ErrorPacket.ERR_NOT_DEFINED, error_msg)
-
         fname, mode = packet.filename.decode(), packet.mode.decode()
-        path = os.path.join(self.tftp_root, fname)
+        path = os.path.realpath(os.path.join(self.tftp_root, fname))
+
+        if not self.allow_write or not path.startswith(self.tftp_root):
+            return ErrorPacket(ErrorPacket.ERR_ACCESS_VIOLATION)
 
         self.file_writer = TftpFileWriter(path, mode)
         self.blockn = 1
