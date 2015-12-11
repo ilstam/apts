@@ -29,6 +29,7 @@ bufsize = 2048
 EXIT_NORMAL = 0
 EXIT_CONF_ERROR = 1
 EXIT_ROOTDIR_ERROR = 2
+EXIT_PRIVILEGES = 3
 
 
 # parse the configuration file
@@ -40,7 +41,7 @@ try:
     try:
         port = int(config_parser['SERVER']['port'])
     except ValueError:
-        raise ParseConfigError("Failed to parse port value.")
+        raise ParseConfigError("Failed to parse port value")
     except KeyError:
         pass
 
@@ -57,11 +58,11 @@ try:
         elif writable == 'False':
             writable = False
         else:
-            raise ParseConfigError("Failed to parse writable value.")
+            raise ParseConfigError("Failed to parse writable value")
     except KeyError:
         pass
 
 except ParseConfigError as e:
     logging.error("Configuration error: " + str(e))
-    logging.info("Aborting.")
+    logging.info("Aborting")
     sys.exit(EXIT_CONF_ERROR)

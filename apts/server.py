@@ -14,6 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import pwd
+import grp
 import sys
 import socket
 import logging
@@ -38,12 +40,8 @@ class TftpServer:
             self.check_tftp_root(writable)
         except TftpRootError as e:
             logging.error(e)
-            logging.info("Terminating the server.")
+            logging.info("Terminating the server")
             sys.exit(config.EXIT_ROOTDIR_ERROR)
-
-        # Change the root directory of the current process for security reasons.
-        # The application must be able to see only what's inside the TFTP root.
-        os.chroot(tftp_root)
 
     def listen(self, ip=config.host, port=config.port):
         """
@@ -54,6 +52,15 @@ class TftpServer:
         server_socket.bind((ip, port))
 
         logging.info('Start listening on port {}'.format(port))
+
+        # Drop no-longer-needed root privileges for security reasons.
+        if TftpServer.drop_root_privileges():
+            u = pwd.getpwuid(os.getuid()).pw_name
+            g = grp.getgrgid(os.getgid()).gr_name
+            logging.info('Dropped root privilages, running as {}:{}'.format(u, g))
+        else:
+            logging.error("Aborting: didn't drop root privileges")
+            sys.exit(config.EXIT_PRIVILEGES)
 
         while True:
             data, client_address = server_socket.recvfrom(config.bufsize)
@@ -73,13 +80,38 @@ class TftpServer:
         Otherwise, raises an TftpRootError with an appropriate message.
         """
         if not os.path.exists(self.tftp_root):
-            raise TftpRootError("The TFTP root does not exist.")
+            raise TftpRootError("The TFTP root does not exist")
         if not os.path.isdir(self.tftp_root):
-            raise TftpRootError("The TFTP root must be a directory.")
+            raise TftpRootError("The TFTP root must be a directory")
         if not os.access(self.tftp_root, os.R_OK):
-            raise TftpRootError("The TFTP root must be readable.")
+            raise TftpRootError("The TFTP root must be readable")
         if writable and not os.access(self.tftp_root, os.W_OK):
-            raise TftpRootError("The TFTP root must be writable.")
+            raise TftpRootError("The TFTP root must be writable")
+
+    @staticmethod
+    def drop_root_privileges(user='nobody', group='nobody'):
+        """
+        Drops root privileges of the process by changing to user 'user' and
+        group 'group'.
+
+        Return True if privileges were dropped, else False.
+        """
+        try:
+            new_uid = pwd.getpwnam(user).pw_uid
+            new_gid = grp.getgrnam(group).gr_gid
+        except KeyError as e:
+            logging.error(e)
+            return False
+
+        try:
+            os.setgroups([]) # remove group privileges
+            os.setgid(new_gid)
+            os.setuid(new_uid)
+        except OSError as e:
+            logging.error('Could not set effective group or user id: {}'.format(e))
+            return False
+
+        return True
 
 
 def main():
