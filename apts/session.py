@@ -178,11 +178,13 @@ class TftpSessionThread(threading.Thread):
         try:
             packet = self.factory.create(data)
         except PacketParseError:
+            msg = "[UNKOWN] Failed to parse received packet"
+            logging.info("[Recv TID={}] ".format(self.tid) + msg)
             return ErrorPacket(ErrorPacket.ERR_ILLEGAL_OPERATION)
-        else:
-            logging.info("[Recv TID={}] ".format(self.tid) + str(packet))
-            self.last_received = packet
-            return self.respond_map[type(packet)](packet)
+
+        logging.info("[Recv TID={}] ".format(self.tid) + str(packet))
+        self.last_received = packet
+        return self.respond_map[type(packet)](packet)
 
     def respond_to_RRQ(self, packet):
         fname, mode = packet.filename.decode(), packet.mode.decode()
