@@ -52,23 +52,18 @@ class TftpServer:
         # AF_INET for IPv4 family address, SOCK_DGRAM for UDP socket
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         server_socket.bind((ip, port))
-
         logging.info('Start listening on port {}'.format(port))
 
-        # Drop no-longer-needed root privileges for security reasons.
-        if TftpServer.drop_root_privileges():
-            u = pwd.getpwuid(os.getuid()).pw_name
-            g = grp.getgrgid(os.getgid()).gr_name
-            logging.info('Dropped root privilages, running as {}:{}'.format(u, g))
-        else:
-            logging.error("Aborting: didn't drop root privileges")
+        # Drop no longer needed root privileges for security reasons.
+        if not self.drop_root_privileges():
+            logging.info('Aborting')
             sys.exit(config.EXIT_PRIVILEGES)
 
         while True:
             data, client_address = server_socket.recvfrom(config.bufsize)
 
-            session_thread = TftpSessionThread(
-                ip, client_address, self.tftp_root, self.writable, data)
+            session_thread = TftpSessionThread(ip, client_address,
+                    self.tftp_root, self.writable, data)
             session_thread.start()
 
     def check_tftp_root(self, writable):
@@ -91,28 +86,29 @@ class TftpServer:
             raise TftpRootError("The TFTP root must be writable")
 
     @staticmethod
-    def drop_root_privileges(user='nobody', group='nobody'):
+    def drop_root_privileges(username='nobody'):
         """
-        Drops root privileges of the process by changing to user 'user' and
-        group 'group'.
+        Drops root privileges of the process by changing to user 'username'
+        and username's group.
 
         Return True if privileges were dropped, else False.
         """
         try:
-            new_uid = pwd.getpwnam(user).pw_uid
-            new_gid = grp.getgrnam(group).gr_gid
+            user = pwd.getpwnam(username)
         except KeyError as e:
             logging.error(e)
             return False
 
         try:
             os.setgroups([]) # remove group privileges
-            os.setgid(new_gid)
-            os.setuid(new_uid)
+            os.setgid(user.pw_gid)
+            os.setuid(user.pw_uid)
         except OSError as e:
             logging.error('Could not set effective group or user id: {}'.format(e))
             return False
 
+        logging.info('Dropped root privilages, running as {}:{}'.format(
+                user.pw_name, grp.getgrgid(user.pw_gid).gr_name))
         return True
 
 
