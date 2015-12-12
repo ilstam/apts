@@ -73,7 +73,6 @@ class TftpSessionThread(threading.Thread):
 
         # Save the last packet we sent, to make retransmission easy.
         self.last_sent = None
-
         self.last_received = None
 
         # Each time we retransmit a package, we can have different timeout
@@ -90,9 +89,6 @@ class TftpSessionThread(threading.Thread):
         # As above, will be initialized with a WRQ packet.
         self.file_writer = None
 
-        # When True, we're done listening for new packets.
-        self.end_of_session = False
-
         self.respond_map = {
             RRQPacket: self.respond_to_RRQ, WRQPacket: self.respond_to_WRQ,
             DataPacket: self.respond_to_Data, ACKPacket: self.respond_to_ACK,
@@ -108,29 +104,23 @@ class TftpSessionThread(threading.Thread):
             self.transfer_socket.settimeout(timeout)
 
             try:
-                # In the first iteration of the loop we use the initial data
-                # as input. After that, we always wait new data from the socket.
                 if self.initial_data is not None:
                     data = self.initial_data
                     self.initial_data = None
                 else:
                     data, _ = self.transfer_socket.recvfrom(config.bufsize)
 
-                response_packet = self.respond_to_data(data)
-                self.send_packet(response_packet)
+                self.send_packet(self.respond_to_data(data))
                 self.retransmissions = 0
 
-                if self.end_of_session:
+                if isinstance(self.last_sent, (ErrorPacket, type(None))):
                     break
             except socket.timeout:
-                if not self.need_to_retransmit():
-                    break # session termination
-
                 self.retransmissions += 1
-                if self.retransmissions < len(self.timeout_values):
-                    self.resend_last()
-                else:
-                    break # session termination
+                if not self.must_retransmit():
+                    break
+
+                self.resend_last()
 
         logging.info('Connection with TID={} closed'.format(self.tid))
 
@@ -138,11 +128,11 @@ class TftpSessionThread(threading.Thread):
         """
         Sends a TftpPacket to the remote host through the transfer socket.
         """
+        self.last_sent = packet
         if packet is None:
             return
 
         self.transfer_socket.sendto(packet.to_wire(), self.remote_address)
-        self.last_sent = packet
         logging.info("[Sent TID={}] ".format(self.tid) + str(packet))
 
     def resend_last(self):
@@ -151,22 +141,18 @@ class TftpSessionThread(threading.Thread):
         """
         self.send_packet(self.last_sent)
 
-    def need_to_retransmit(self):
+    def must_retransmit(self):
         """
         Checks whether the last sent packet needs retransmission after a
         socket timeout.
 
         Returns True if we need to retransmit the last packet, else False.
         """
-        # We do not retransmit error packets or ACK packets for the last block
-        # of data. We do not expect a response for both of these types (although
-        # sometimes the remote host will acknowledge the error packets).
-
-        if isinstance(self.last_sent, ErrorPacket):
+        if self.retransmissions >= len(self.timeout_values):
             return False
+        # Do not retransmit ACK packets for the last block of data.
         if isinstance(self.last_received, DataPacket):
             return not self.last_received.is_last
-
         return True
 
     def respond_to_data(self, data):
@@ -220,7 +206,6 @@ class TftpSessionThread(threading.Thread):
                 self.file_writer.write_next_block(packet.data)
                 self.blockn += 1
             except IOError:
-                # No space left on device
                 return ErrorPacket(ErrorPacket.ERR_DISK_FULL)
 
         return ACKPacket(packet.blockn)
@@ -228,8 +213,8 @@ class TftpSessionThread(threading.Thread):
     def respond_to_ACK(self, packet):
         if packet.blockn == self.blockn:
             if isinstance(self.last_sent, DataPacket) and self.last_sent.is_last:
-                self.end_of_session = True
-                return None
+                return
+
             self.blockn += 1
             data = self.file_reader.get_next_block()
             return DataPacket(self.blockn, data)
