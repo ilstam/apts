@@ -104,25 +104,37 @@ class TftpSessionThread(threading.Thread):
             self.transfer_socket.settimeout(timeout)
 
             try:
-                if self.initial_data is not None:
-                    data = self.initial_data
-                    self.initial_data = None
-                else:
-                    data, _ = self.transfer_socket.recvfrom(config.bufsize)
-
-                self.send_packet(self.respond_to_data(data))
-                self.retransmissions = 0
-
-                if isinstance(self.last_sent, (ErrorPacket, type(None))):
-                    break
+                data = self.read_new_data()
             except socket.timeout:
                 self.retransmissions += 1
                 if not self.must_retransmit():
                     break
 
                 self.resend_last()
+            else:
+                self.send_packet(self.respond_to_data(data))
+                self.retransmissions = 0
+
+                if isinstance(self.last_sent, (ErrorPacket, type(None))):
+                    break
 
         logging.info('Connection with TID={} closed'.format(self.tid))
+
+    def read_new_data(self):
+        """
+        Returns new raw data for processing.
+
+        First time called, it returns the initial data that have been passed
+        to the session. After then, it reads data from the transfer_socket.
+
+        May raise socket.timeout error.
+        """
+        if self.initial_data is None:
+            return self.transfer_socket.recvfrom(config.bufsize)[0]
+
+        data = self.initial_data
+        self.initial_data = None
+        return data
 
     def send_packet(self, packet):
         """
@@ -165,11 +177,12 @@ class TftpSessionThread(threading.Thread):
         """
         try:
             packet = self.factory.create(data)
+        except PacketParseError:
+            return ErrorPacket(ErrorPacket.ERR_ILLEGAL_OPERATION)
+        else:
             logging.info("[Recv TID={}] ".format(self.tid) + str(packet))
             self.last_received = packet
             return self.respond_map[type(packet)](packet)
-        except PacketParseError:
-            return ErrorPacket(ErrorPacket.ERR_ILLEGAL_OPERATION)
 
     def respond_to_RRQ(self, packet):
         fname, mode = packet.filename.decode(), packet.mode.decode()
@@ -204,9 +217,10 @@ class TftpSessionThread(threading.Thread):
         if packet.blockn == self.blockn:
             try:
                 self.file_writer.write_next_block(packet.data)
-                self.blockn += 1
             except IOError:
                 return ErrorPacket(ErrorPacket.ERR_DISK_FULL)
+            else:
+                self.blockn += 1
 
         return ACKPacket(packet.blockn)
 

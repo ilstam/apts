@@ -52,15 +52,15 @@ try:
 
     try:
         writable = config_parser['SERVER']['writable']
-
+    except KeyError:
+        pass
+    else:
         if writable == 'True':
             writable = True
         elif writable == 'False':
             writable = False
         else:
             raise ParseConfigError("Failed to parse writable value")
-    except KeyError:
-        pass
 
 except ParseConfigError as e:
     logging.error("Configuration error: " + str(e))
