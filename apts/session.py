@@ -188,7 +188,7 @@ class TftpSessionThread(threading.Thread):
 
     def respond_to_RRQ(self, packet):
         fname, mode = packet.filename.decode(), packet.mode.decode()
-        path = os.path.realpath(os.path.join(self.tftp_root, fname))
+        path = os.path.realpath(os.path.join(self.tftp_root, fname.strip('/')))
 
         # Ensure that file exists and resides inside the tftp root.
         if not os.path.isfile(path) or not path.startswith(self.tftp_root):
@@ -202,7 +202,7 @@ class TftpSessionThread(threading.Thread):
 
     def respond_to_WRQ(self, packet):
         fname, mode = packet.filename.decode(), packet.mode.decode()
-        path = os.path.realpath(os.path.join(self.tftp_root, fname))
+        path = os.path.realpath(os.path.join(self.tftp_root, fname.strip('/')))
 
         if not self.allow_write or not path.startswith(self.tftp_root):
             return ErrorPacket(ErrorPacket.ERR_ACCESS_VIOLATION)
