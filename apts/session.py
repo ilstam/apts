@@ -190,9 +190,11 @@ class TftpSessionThread(threading.Thread):
         fname, mode = packet.filename.decode(), packet.mode.decode()
         path = os.path.realpath(os.path.join(self.tftp_root, fname.strip('/')))
 
-        # Ensure that file exists and resides inside the tftp root.
+        # Ensure that file exists, is readable and resides in the tftp root.
         if not os.path.isfile(path) or not path.startswith(self.tftp_root):
             return ErrorPacket(ErrorPacket.ERR_FILE_NOT_FOUND)
+        if not os.access(path, os.R_OK):
+            return ErrorPacket(ErrorPacket.ERR_ACCESS_VIOLATION)
 
         self.file_reader = TftpFileReader(path, mode)
         data = self.file_reader.get_next_block()
@@ -204,7 +206,9 @@ class TftpSessionThread(threading.Thread):
         fname, mode = packet.filename.decode(), packet.mode.decode()
         path = os.path.realpath(os.path.join(self.tftp_root, fname.strip('/')))
 
-        if not self.allow_write or not path.startswith(self.tftp_root):
+        if not all([self.allow_write,
+                    path.startswith(self.tftp_root),
+                    os.access(os.path.split(path)[0], os.W_OK)]):
             return ErrorPacket(ErrorPacket.ERR_ACCESS_VIOLATION)
 
         self.file_writer = TftpFileWriter(path, mode)
