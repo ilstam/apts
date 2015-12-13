@@ -39,7 +39,7 @@ class TftpServer:
         try:
             self.check_tftp_root(writable)
         except TftpRootError as e:
-            logging.error(e)
+            logging.error("{}: {}".format(e, self.tftp_root))
             logging.info("Terminating the server")
             sys.exit(config.EXIT_ROOTDIR_ERROR)
 
