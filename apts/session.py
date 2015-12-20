@@ -78,7 +78,7 @@ class TftpSessionThread(threading.Thread):
         # Each time we retransmit a package, we can have different timeout
         # values. When and if the values of the following tuple is exhausted,
         # the transfer is considered failed and the session is terminated.
-        self.timeout_values = (8, 8, 8)
+        self.timeout_values = (3, 5, 8)
 
         # Indicates the number of retransmissions of the last sent packet.
         self.retransmissions = 0
