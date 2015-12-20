@@ -36,10 +36,7 @@ class TftpServer:
         self.tftp_root = os.path.realpath(tftp_root)
         self.writable = writable
 
-        try:
-            self.check_tftp_root(writable)
-        except TftpRootError as e:
-            logging.error("{}: {}".format(e, self.tftp_root))
+        if not self.check_tftp_root():
             logging.info("Terminating the server")
             sys.exit(config.EXIT_ROOTDIR_ERROR)
 
@@ -66,24 +63,22 @@ class TftpServer:
                     self.tftp_root, self.writable, data)
             session_thread.start()
 
-    def check_tftp_root(self, writable):
+    def check_tftp_root(self):
         """
-        Perform sanity checks on the tftp root path.
+        Performs sanity checks on the tftp root path.
 
-        Keyword arguments:
-        writable - if True, check if the path is writable
-
-        Returns None if the path passes all the checks.
-        Otherwise, raises an TftpRootError with an appropriate message.
+        Returns True if the path passes the tests, else False.
         """
-        if not os.path.exists(self.tftp_root):
-            raise TftpRootError("The TFTP root does not exist")
-        if not os.path.isdir(self.tftp_root):
-            raise TftpRootError("The TFTP root must be a directory")
-        if not os.access(self.tftp_root, os.R_OK):
-            raise TftpRootError("The TFTP root must be readable")
-        if writable and not os.access(self.tftp_root, os.W_OK):
-            raise TftpRootError("The TFTP root must be writable")
+        try:
+            if not os.path.exists(self.tftp_root):
+                raise TftpRootError("The TFTP root does not exist")
+            if not os.path.isdir(self.tftp_root):
+                raise TftpRootError("The TFTP root must be a directory")
+        except TftpRootError as e:
+            logging.error("{}: {}".format(e, self.tftp_root))
+            return False
+
+        return True
 
     @staticmethod
     def drop_root_privileges(username='nobody'):
@@ -91,7 +86,7 @@ class TftpServer:
         Drops root privileges of the process by changing to user 'username'
         and username's group.
 
-        Return True if privileges were dropped, else False.
+        Returns True if privileges were dropped, else False.
         """
         try:
             user = pwd.getpwnam(username)
