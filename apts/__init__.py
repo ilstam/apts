@@ -18,7 +18,7 @@ __description__ = __doc__
 __author__ = "Ilias Stamatis"
 __author_email__ = "stamatis.iliass@gmail.com"
 __license__ = "GNU GPL3"
-__platforms__ = "Linux, Windows"
+__platforms__ = "Linux"
 __url__ = "https://github.com/Ilias95/apts"
 __download_url__ = __url__
 
