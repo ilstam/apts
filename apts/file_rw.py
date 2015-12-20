@@ -53,9 +53,6 @@ class TftpFileReader(TftpFileIO):
         from the file due to netascii conversions. However, regardless of the
         self.mode it will always return 512 bytes or less.
         """
-        if self._file.closed:
-            raise TftpIOError("read attemption of closed file")
-
         if self.mode == 'netascii':
             return self.get_next_block_netascii()
         if self.mode == 'octet':
@@ -83,7 +80,9 @@ class TftpFileReader(TftpFileIO):
                 self.read_next_bytes()
                 self.netascii_bytes += netascii.encode(self._bytes)
             except TftpIOError:
-                break
+                if self.netascii_bytes:
+                    break
+                raise # reraise the TftpIOError
 
         to_send = self.netascii_bytes[:self.block_size]
         self.netascii_bytes = self.netascii_bytes[self.block_size:]
