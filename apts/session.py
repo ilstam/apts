@@ -61,7 +61,7 @@ class TftpSessionThread(threading.Thread):
         self.allow_write = allow_write
 
         # We must create a new socket with a random TID for the transfer.
-        # Port 0 means that the OS will pick an available port for us.
+        # Port value 0 means that the OS will pick an available port for us.
         self.transfer_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.transfer_socket.bind((interface, 0))
         self.tid = self.transfer_socket.getsockname()[1]
@@ -99,6 +99,16 @@ class TftpSessionThread(threading.Thread):
                      .format(remote_address[0], self.tid))
 
     def run(self):
+        """
+        This method represents the thread's activity as it overrides the
+        threading.Thread's run() method and it can be seen as the main of the
+        session.
+
+        It waits for new data, takes care of retransmissions and handles
+        received data appropriately.
+
+        When this method is over the session is terminated.
+        """
         while True:
             timeout = self.timeout_values[self.retransmissions]
             self.transfer_socket.settimeout(timeout)
@@ -233,7 +243,7 @@ class TftpSessionThread(threading.Thread):
     def respond_to_ACK(self, packet):
         if packet.blockn == self.blockn:
             if isinstance(self.last_sent, DataPacket) and self.last_sent.is_last:
-                return
+                return None
 
             self.blockn += 1
             data = self.file_reader.get_next_block()
